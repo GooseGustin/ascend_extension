@@ -34,7 +34,7 @@ export function QuestSelectDropdown({
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
         <button
-          className="w-full h-10 px-3 flex items-center justify-between gap-2 bg-[#2f3136] hover:bg-[#36393f] border border-[#202225] rounded-md text-sm text-[#dbdee1] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#00b0f4]"
+          className="w-full h-10 px-3 flex items-center justify-between gap-2 bg-[#2f3136] hover:bg-[#36393f] border border-[#202225] rounded-md text-sm text-[#dbdee1] transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00b0f4] focus-visible:ring-offset-1 focus-visible:ring-offset-[#36393f]"
         >
           <div className="flex items-center gap-2 overflow-hidden">
             {selectedQuest ? (
