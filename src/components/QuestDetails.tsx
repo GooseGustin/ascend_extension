@@ -275,7 +275,7 @@ export function QuestDetails({
         onSaveQuest={async (updates) => {
           try {
             hideModal();
-            onEditQuest?.(updates as any);
+            onUpdateQuest?.(quest.questId, updates);
           } catch (error) {
             console.error("Failed to save quest:", error);
           }
