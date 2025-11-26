@@ -635,11 +635,13 @@ export default function App() {
         <MainPanel
           userId={userId}
           tasks={tasks}
-          // workerQuests={workerQuests}
+          workerQuests={workerQuests}
+          selectedQuestId={selectedQuestId}
           onToggleTask={toggleTaskComplete}
           onReorderTasks={reorderTasks}
           onStartFocus={startFocusWithModal}
           onFloatingPlusClick={handleFloatingPlusClick}
+          onQuestSelect={handleQuestSelect}
         />
       )}
       {activeNav === "quests" && (
