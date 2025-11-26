@@ -43,7 +43,7 @@ interface QuestDetailsProps {
   onAddSubtask: (questId: string, title: string) => void;
   onDeleteQuest?: (questId: string) => void;
   onArchiveQuest?: (questId: string) => void;
-  onEditQuest?: (quest: Quest) => void;
+  onUpdateQuest?: (questId: string, updates: Partial<Quest>) => void;
 }
 
 export function QuestDetails({
