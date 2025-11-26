@@ -24,6 +24,7 @@ import { Task } from "../App";
 import { QuestService } from "../worker";
 import { AuthService, getTaskService } from "../worker";
 import { useModal } from "../context/ModalContext";
+import { QuestEditForm } from "./QuestEditForm";
 import {
   saveTaskOrder,
   loadTaskOrder,
