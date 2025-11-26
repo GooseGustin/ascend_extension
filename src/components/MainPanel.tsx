@@ -28,6 +28,7 @@ interface MainPanelProps {
   onStartFocus: (task: Task | Subtask, questTitle?: string) => void;
   onFloatingPlusClick: () => void;
   onQuestSelect?: (questId: string) => void;
+  onAddSubtask?: (questId: string, title: string) => void;
 }
 
 export function MainPanel({
