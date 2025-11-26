@@ -69,6 +69,16 @@ export function MainPanel({
     }
   };
 
+  const handleAddSubtaskSubmit = async () => {
+    if (!newSubtaskTitle.trim() || !selectedQuestId) return;
+    try {
+      onAddSubtask?.(selectedQuestId, newSubtaskTitle.trim());
+      setNewSubtaskTitle("");
+    } catch (error) {
+      console.error("Failed to add subtask:", error);
+    }
+  };
+
   // useEffect(() => {
   //   async function loadTaskOrder() {
   //     try {
