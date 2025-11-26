@@ -21,10 +21,13 @@ interface QuestsMainPanelProps {
   onToggleSubtask: (questId: string, subtaskId: string) => void;
   onAddComment?: (questId: string, text: string) => void;
   // onCreateQuest: (quest: Omit<Quest, 'id' | 'currentXP' | 'progress'>) => void;
-  onCreateQuest: () => void; 
+  onCreateQuest: () => void;
   onCancelCreate: () => void;
   onAddSubtask: (questId: string, title: string) => void;
   onFloatingPlusClick: () => void;
+  onDeleteQuest?: (questId: string) => void;
+  onArchiveQuest?: (questId: string) => void;
+  onUpdateQuest?: (questId: string, updates: Partial<Quest>) => void;
 }
 
 export function QuestsMainPanel({
