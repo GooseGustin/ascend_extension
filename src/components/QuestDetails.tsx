@@ -265,6 +265,23 @@ export function QuestDetails({
     );
   };
 
+  const showEditForm = () => {
+    showModal(
+      <QuestEditForm
+        quest={quest}
+        onSaveQuest={async (updates) => {
+          try {
+            hideModal();
+            onEditQuest?.(updates as any);
+          } catch (error) {
+            console.error("Failed to save quest:", error);
+          }
+        }}
+        onCancel={() => hideModal()}
+      />
+    );
+  };
+
   const progress = Math.round(
     (quest.gamification.currentExp / quest.gamification.expToNextLevel) * 100
   );
