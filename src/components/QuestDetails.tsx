@@ -40,6 +40,9 @@ interface QuestDetailsProps {
   onToggleSubtask: (questId: string, subtaskId: string) => void;
   onAddComment?: (questId: string, text: string) => void;
   onAddSubtask: (questId: string, title: string) => void;
+  onDeleteQuest?: (questId: string) => void;
+  onArchiveQuest?: (questId: string) => void;
+  onEditQuest?: (quest: Quest) => void;
 }
 
 export function QuestDetails({
