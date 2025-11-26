@@ -41,10 +41,12 @@ export function MainPanel({
   onStartFocus,
   onFloatingPlusClick,
   onQuestSelect,
+  onAddSubtask,
 }: MainPanelProps) {
   const [filter, setFilter] = useState<"all" | "scheduled" | "pomodoro">("all");
   const [stats, setStats] = useState<TodayMetrics | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
 
   const analyticsService = new AnalyticsService();
   const authService = new AuthService();
