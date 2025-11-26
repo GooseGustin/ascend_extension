@@ -86,6 +86,9 @@ export function QuestsMainPanel({
         onToggleSubtask={onToggleSubtask}
         onAddSubtask={onAddSubtask}
         onAddComment={onAddComment}
+        onDeleteQuest={onDeleteQuest}
+        onArchiveQuest={onArchiveQuest}
+        onUpdateQuest={onUpdateQuest}
       />
     );
   }
