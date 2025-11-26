@@ -62,7 +62,7 @@ export function QuestSelectDropdown({
       </PopoverTrigger>
 
       <PopoverContent
-        className="w-[var(--radix-popover-trigger-width)] p-2 bg-[#2f3136] border border-[#202225] rounded-lg shadow-2xl"
+        className="min-w-[280px] p-2 bg-[#2f3136] border border-[#202225] rounded-lg shadow-2xl"
         align="start"
         sideOffset={8}
       >
