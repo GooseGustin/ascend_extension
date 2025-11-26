@@ -190,12 +190,24 @@ export function MainPanel({
 
           {/* Add Subtask Bar */}
           <div className="mb-6">
-            <div className="relative">
-              <Plus className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#72767d]" />
-              <Input
-                placeholder="Add a quick subtask to any quest..."
-                className="bg-[#202225] border-[#202225] pl-10 h-10 placeholder:text-[#72767d] focus-visible:ring-1 focus-visible:ring-[#00b0f4]"
+            <div className="flex flex-col gap-3">
+              <QuestSelectDropdown
+                quests={workerQuests.map((q) => ({
+                  questId: q.questId,
+                  title: q.title,
+                  color: q.color,
+                }))}
+                selectedQuestId={selectedQuestId || null}
+                onSelect={(questId) => onQuestSelect?.(questId)}
+                placeholder="Select a quest..."
               />
+              <div className="relative">
+                <Plus className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#72767d]" />
+                <Input
+                  placeholder="Add a quick subtask to any quest..."
+                  className="bg-[#202225] border-[#202225] pl-10 h-10 placeholder:text-[#72767d] focus-visible:ring-1 focus-visible:ring-[#00b0f4]"
+                />
+              </div>
             </div>
           </div>
 
