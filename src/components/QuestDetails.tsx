@@ -250,31 +250,58 @@ export function QuestDetails({
   return (
     <div className="flex-1 bg-[#36393f] flex flex-col">
       {/* Title Bar */}
-      <div className="h-12 px-6 flex items-center border-b border-[#202225] shrink-0">
-        <span className="text-xl mr-2">{getIconForQuest(quest)}</span>
-        <span className="text-white">{quest.title}</span>
-        <div
-          className="ml-3 px-2 py-1 rounded text-xs uppercase tracking-wide flex items-center gap-1"
-          style={{
-            backgroundColor: `${getTypeColor()}20`,
-            color: getTypeColor(),
-          }}
-        >
-          {getTypeIcon()}
-          {getTypeLabel()}
+      <div className="h-12 px-6 flex items-center justify-between border-b border-[#202225] shrink-0">
+        <div className="flex items-center gap-3 min-w-0">
+          <span className="text-xl">{getIconForQuest(quest)}</span>
+          <span className="text-white truncate">{quest.title}</span>
+          <div
+            className="px-2 py-1 rounded text-xs uppercase tracking-wide flex items-center gap-1 flex-shrink-0"
+            style={{
+              backgroundColor: `${getTypeColor()}20`,
+              color: getTypeColor(),
+            }}
+          >
+            {getTypeIcon()}
+            {getTypeLabel()}
+          </div>
+          {quest.members && quest.members.length > 0 && (
+            <div className="flex items-center gap-1 text-xs text-[#b9bbbe] flex-shrink-0">
+              <Users className="w-3 h-3" />
+              {quest.members.length} warriors
+            </div>
+          )}
+          {quest.dueDate && (
+            <div className="flex items-center gap-1 text-xs text-[#b9bbbe] flex-shrink-0">
+              <Calendar className="w-3 h-3" />
+              {new Date(quest.dueDate).toLocaleDateString()}
+            </div>
+          )}
         </div>
-        {quest.members && quest.members.length > 0 && (
-          <div className="ml-3 flex items-center gap-1 text-xs text-[#b9bbbe]">
-            <Users className="w-3 h-3" />
-            {quest.members.length} warriors
-          </div>
-        )}
-        {quest.dueDate && (
-          <div className="ml-3 flex items-center gap-1 text-xs text-[#b9bbbe]">
-            <Calendar className="w-3 h-3" />
-            {new Date(quest.dueDate).toLocaleDateString()}
-          </div>
-        )}
+
+        {/* Action Icons */}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <button
+            onClick={() => onEditQuest?.(quest)}
+            className="p-1.5 text-[#72767d] hover:text-[#5865F2] transition-colors rounded hover:bg-[#4f545c]"
+            title="Edit quest"
+          >
+            <Edit className="w-5 h-5" />
+          </button>
+          <button
+            onClick={() => onArchiveQuest?.(quest.questId)}
+            className="p-1.5 text-[#72767d] hover:text-[#FEE75C] transition-colors rounded hover:bg-[#4f545c]"
+            title="Archive quest"
+          >
+            <Archive className="w-5 h-5" />
+          </button>
+          <button
+            onClick={() => showDeleteConfirmation()}
+            className="p-1.5 text-[#72767d] hover:text-[#ED4245] transition-colors rounded hover:bg-[#4f545c]"
+            title="Delete quest"
+          >
+            <Trash2 className="w-5 h-5" />
+          </button>
+        </div>
       </div>
 
       {/* Scrollable Content */}
