@@ -204,6 +204,30 @@ export function MainPanel({
           {/* Add Subtask Bar */}
           <div className="mb-6">
             <div className="flex flex-col gap-3">
+              <div className="bg-[#2f3136] rounded px-3 py-2 flex items-center gap-2 border-2 border-transparent hover:border-[#5865F2] transition-colors">
+                <Plus className="w-4 h-4 text-[#72767d]" />
+                <input
+                  type="text"
+                  value={newSubtaskTitle}
+                  onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleAddSubtaskSubmit();
+                    }
+                  }}
+                  placeholder="Add a quick subtask to any quest..."
+                  className="flex-1 bg-transparent text-white text-sm placeholder:text-[#72767d] outline-none border-0"
+                />
+                <button
+                  onClick={handleAddSubtaskSubmit}
+                  disabled={!newSubtaskTitle.trim() || !selectedQuestId}
+                  className="text-[#5865F2] hover:text-[#4752C4] disabled:opacity-0 transition-all text-sm px-2 py-1"
+                >
+                  Add
+                </button>
+              </div>
+
               <QuestSelectDropdown
                 quests={workerQuests.map((q) => ({
                   questId: q.questId,
@@ -214,13 +238,6 @@ export function MainPanel({
                 onSelect={(questId) => onQuestSelect?.(questId)}
                 placeholder="Select a quest..."
               />
-              <div className="relative">
-                <Plus className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#72767d]" />
-                <Input
-                  placeholder="Add a quick subtask to any quest..."
-                  className="bg-[#202225] border-[#202225] pl-10 h-10 placeholder:text-[#72767d] focus-visible:ring-1 focus-visible:ring-[#00b0f4]"
-                />
-              </div>
             </div>
           </div>
 
