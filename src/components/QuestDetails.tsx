@@ -232,6 +232,38 @@ export function QuestDetails({
     }
   };
 
+  const showDeleteConfirmation = () => {
+    showModal(
+      <div className="bg-[#36393f] rounded-lg shadow-lg max-w-md p-6 border border-[#202225]">
+        <h2 className="text-xl text-white font-semibold mb-2">Delete Quest?</h2>
+        <p className="text-sm text-[#b9bbbe] mb-6">
+          This action is permanent and cannot be undone. The quest "{quest.title}" will be permanently deleted.
+        </p>
+        <div className="flex gap-3 justify-end">
+          <button
+            onClick={() => hideModal()}
+            className="px-4 py-2 rounded text-sm text-[#dbdee1] bg-[#2f3136] hover:bg-[#4f545c] transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={async () => {
+              try {
+                hideModal();
+                onDeleteQuest?.(quest.questId);
+              } catch (error) {
+                console.error("Failed to delete quest:", error);
+              }
+            }}
+            className="px-4 py-2 rounded text-sm text-white bg-[#ED4245] hover:bg-[#da373f] transition-colors"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   const progress = Math.round(
     (quest.gamification.currentExp / quest.gamification.expToNextLevel) * 100
   );
