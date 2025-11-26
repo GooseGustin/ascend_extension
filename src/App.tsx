@@ -642,6 +642,7 @@ export default function App() {
           onStartFocus={startFocusWithModal}
           onFloatingPlusClick={handleFloatingPlusClick}
           onQuestSelect={handleQuestSelect}
+          onAddSubtask={handleAddSubtask}
         />
       )}
       {activeNav === "quests" && (
