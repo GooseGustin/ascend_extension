@@ -11,6 +11,9 @@ import {
   Calendar,
   Plus,
   GripVertical,
+  Edit,
+  Archive,
+  Trash2,
 } from "lucide-react";
 import { Checkbox } from "./ui/checkbox";
 import { Button } from "./ui/button";
@@ -20,6 +23,7 @@ import type { GoalComment } from "../worker/models/GoalComment";
 import { Task } from "../App";
 import { QuestService } from "../worker";
 import { AuthService, getTaskService } from "../worker";
+import { useModal } from "../context/ModalContext";
 import {
   saveTaskOrder,
   loadTaskOrder,
