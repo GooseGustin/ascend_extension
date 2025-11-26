@@ -331,7 +331,7 @@ export function QuestDetails({
         {/* Action Icons */}
         <div className="flex items-center gap-2 flex-shrink-0">
           <button
-            onClick={() => onEditQuest?.(quest)}
+            onClick={() => showEditForm()}
             className="p-1.5 text-[#72767d] hover:text-[#5865F2] transition-colors rounded hover:bg-[#4f545c]"
             title="Edit quest"
           >
