@@ -54,6 +54,9 @@ export function QuestDetails({
   onToggleSubtask,
   onAddSubtask,
   onAddComment,
+  onDeleteQuest,
+  onArchiveQuest,
+  onUpdateQuest,
 }: QuestDetailsProps) {
   const [expandedSections, setExpandedSections] = useState({
     milestones: true,
