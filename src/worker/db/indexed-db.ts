@@ -1,0 +1,248 @@
+/**
+ * IndexedDB Wrapper for Worker Storage
+ * Handles all local data persistence
+ */
+
+import Dexie, { Table } from "dexie";
+
+// Import types from models
+import type { UserProfile } from "../models/UserProfile";
+import type { Quest } from "../models/Quest";
+import type { Session } from "../models/Session";
+import type { TaskOrder } from "../models/TaskOrder";
+import type { ActivityItem } from "../models/ActivityItem";
+import type { AgentState } from "../models/AgentState";
+import type { GoalComment } from "../models/GoalComment";
+import type { Notification } from "../models/Notification";
+import type { SyncOperation } from "../models/SyncOperation";
+
+export class IndexedDb extends Dexie {
+  // Tables
+  users!: Table<UserProfile, string>;
+  quests!: Table<Quest, string>;
+  sessions!: Table<Session, string>;
+  taskOrders!: Table<TaskOrder, string>;
+  activityFeed!: Table<ActivityItem, string>;
+  agentStates!: Table<AgentState, string>;
+  comments!: Table<GoalComment, string>;
+  notifications!: Table<Notification, string>;
+  syncQueue!: Table<SyncOperation, string>;
+
+  constructor() {
+    super("AscendDB");
+    this.version(4).stores({
+      // BUMP VERSION
+      users: "userId, username, totalLevel",
+      quests:
+        "questId, ownerId, type, isPublic, isCompleted, [ownerId+isCompleted]",
+      sessions:
+        "sessionId, userId, questId, startTime, status, [userId+startTime]",
+      taskOrders: "&id, userId, date, questId, [userId+date], [userId+date+questId]",
+      activityFeed: "activityId, userId, type, timestamp, [userId+timestamp]",
+      agentStates: "userId, lastObservationTimestamp",
+      comments: "commentId, questId, userId, timestamp",
+      notifications:
+        "notificationId, userId, isRead, createdAt, [userId+isRead]",
+      syncQueue: "id, timestamp, priority, [priority+timestamp]",
+    });
+
+    // Migration/upgrade block: convert older taskOrder shapes if needed
+    this.on("ready", async () => {
+      // no-op; just ensure DB ready
+    });
+
+    this.on("populate", () => {
+      // initial seeding if needed
+    });
+
+    // Optionally, also add explicit upgrade handler (Dexie supports .upgrade in version)
+    // If you need to migrate existing taskOrders with old schema to new TaskOrderItem shape,
+    // implement below as needed:
+    this.version(4).upgrade(async (trans) => {
+      try {
+        const old = await trans.table("taskOrders").toArray();
+        // If old items already look like new shape, nothing to do.
+        for (const item of old) {
+          // detection: if item.taskOrder is array of strings, convert to TaskOrderItem[]
+          if (Array.isArray(item.taskOrder) && item.taskOrder.length > 0 && typeof item.taskOrder[0] === "string") {
+            // attempt best-effort conversion: map subtask id -> questId by scanning quests
+            const quests = await trans.table("quests").toArray();
+            const enriched = item.taskOrder.map((taskIdStr: string) => {
+              // try to find quest that contains this subtask id
+              const foundQuest = quests.find((q: any) => Array.isArray(q.subtasks) && q.subtasks.some((s: any) => s.id === taskIdStr));
+              return {
+                taskId: taskIdStr,
+                questId: foundQuest ? foundQuest.questId : null
+              };
+            });
+            item.taskOrder = enriched;
+            await trans.table("taskOrders").put(item);
+          }
+        }
+      } catch (e) {
+        console.warn("[IndexedDB upgrade] taskOrders migration failed:", e);
+      }
+    });
+  }
+
+  /**
+   * Get active quests for user
+   */
+  async getActiveQuests(userId: string): Promise<Quest[]> {
+    console.log("In indexed-db, getActiveQuests", userId);
+    const quests = await this.quests
+      .where("ownerId")
+      .equals(userId)
+      // .where('[ownerId+isCompleted]')
+      // .equals([userId, 0] as any) // 0 = false
+      .toArray();
+    console.log("User, quests", userId, quests);
+    return quests.filter((q) => q.isCompleted === false);
+  }
+
+  /**
+   * Get sessions for date range
+   */
+  async getSessionsByDateRange(
+    userId: string,
+    startDate: string,
+    endDate: string
+  ): Promise<Session[]> {
+    const start = new Date(startDate).getTime();
+    const end = new Date(endDate).getTime();
+
+    const sessions = await this.sessions
+      .where("userId")
+      .equals(userId)
+      // .where('[userId+startTime]')
+      // .between([userId, new Date(start).toISOString()] as any, [userId, new Date(end).toISOString()] as any)
+      .toArray();
+    console.log("In indexed db, leaving get sessions by date range");
+    return sessions;
+  }
+
+  /**
+   * Get today's sessions
+   */
+  async getTodaySessions(userId: string): Promise<Session[]> {
+    const today = new Date().toISOString().split("T")[0];
+    const tomorrow = new Date(Date.now() + 86400000)
+      .toISOString()
+      .split("T")[0];
+
+    return await this.getSessionsByDateRange(userId, today, tomorrow);
+  }
+
+  /**
+   * Get task order for quest
+   */
+  async getTaskOrder(userId: string): Promise<TaskOrder | undefined> {
+    console.log("In indexed db, Getting task order from db");
+    const taskOrders = await this.taskOrders
+      .where("userId")
+      .equals(userId)
+      // .where('[userId+questId]')
+      // .equals([userId, questId] as any)
+      .first();
+    console.log("In indexed db, leaving get task orders");
+    return taskOrders;
+  }
+
+  /**
+   * Get task order for today's home view
+   */
+  async getTaskOrderForToday(userId: string): Promise<TaskOrder | undefined> {
+    const today = new Date().toISOString().split("T")[0];
+    // search by compound index userId+date first, then filter questId null
+    const found = await this.taskOrders
+      .where("[userId+date]")
+      .equals([userId, today])
+      .filter((d: any) => !d.questId) // home only
+      .first();
+    return found as TaskOrder | undefined;
+  }
+
+
+  /**
+   * Upsert task order
+   */
+  async upsertTaskOrder(taskOrder: { id?: string; userId: string; date: string; questId?: string | undefined; taskOrder: any[]; lastUpdated?: string }) {
+    // ensure lastUpdated
+    const doc = {
+      ...taskOrder,
+      lastUpdated: taskOrder.lastUpdated ?? new Date().toISOString()
+    };
+    // If no id, compute stable id to avoid duplicates: user-date-quest/home
+    const id = taskOrder.id ?? (taskOrder.questId ? `${taskOrder.userId}-${taskOrder.date}-${taskOrder.questId}` : `${taskOrder.userId}-${taskOrder.date}-home`);
+    await this.taskOrders.put({ ...doc, id });
+    // await this.taskOrders.put(doc); 
+  }
+
+  // convenience to list all taskOrders (debug)
+  async allTaskOrders() {
+    return this.taskOrders.toArray();
+  }
+
+
+  /**
+   * Add to sync queue
+   */
+  async queueSync(
+    operation: Omit<SyncOperation, "id" | "timestamp">
+  ): Promise<void> {
+    const id = `${operation.collection}-${operation.documentId || Date.now()}`;
+    console.log("In indexed db, In queue sync");
+
+    await this.syncQueue.put({
+      ...operation,
+      id,
+      // timestamp: Date.now().toString(),
+      retries: 0,
+      error: null,
+    } as SyncOperation);
+  }
+
+  /**
+   * Get pending sync operations sorted by priority
+   */
+  async getPendingSyncOps(limit: number = 50): Promise<SyncOperation[]> {
+    return await this.syncQueue
+      .orderBy("[priority+timestamp]")
+      .reverse() // High priority first
+      .limit(limit)
+      .toArray();
+  }
+
+  /**
+   * Remove sync operation
+   */
+  async removeSyncOp(id: string): Promise<void> {
+    await this.syncQueue.delete(id);
+  }
+
+  /**
+   * Clear all data (for testing/reset)
+   */
+  async clearAll(): Promise<void> {
+    await Promise.all([
+      this.users.clear(),
+      this.quests.clear(),
+      this.sessions.clear(),
+      this.taskOrders.clear(),
+      this.activityFeed.clear(),
+      this.agentStates.clear(),
+      this.comments.clear(),
+      this.notifications.clear(),
+      this.syncQueue.clear(),
+    ]);
+  }
+}
+
+let _db: IndexedDb | null = null;
+
+export function getDB() {
+  if (!_db) {
+    _db = new IndexedDb();
+  }
+  return _db;
+}
