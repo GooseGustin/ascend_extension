@@ -35,7 +35,7 @@ export function QuestsMainPanel({
   tasks,
   selectedQuestId,
   discoveryMode,
-  createQuestMode, 
+  createQuestMode,
   questComments,
   publicQuests = [],
   onStartFocus,
@@ -47,6 +47,9 @@ export function QuestsMainPanel({
   onCancelCreate,
   onAddSubtask,
   onFloatingPlusClick,
+  onDeleteQuest,
+  onArchiveQuest,
+  onUpdateQuest,
 }: QuestsMainPanelProps) {
   const selectedQuest = selectedQuestId ? quests.find(q => q.questId === selectedQuestId) : null;
 
