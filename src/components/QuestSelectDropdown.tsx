@@ -78,9 +78,10 @@ export function QuestSelectDropdown({
                 onClick={() => handleSelect(quest.questId)}
                 className={`w-full px-3 py-2 rounded-md text-left text-sm transition-all duration-150 flex items-center gap-2 ${
                   selectedQuestId === quest.questId
-                    ? "bg-[#5865F2] text-white font-semibold shadow-lg shadow-[#5865F2]/30"
-                    : "text-[#dbdee1] hover:bg-[#36393f] hover:shadow-md hover:shadow-[#00b0f4]/20"
+                    ? "bg-[#5865F2] text-white font-semibold"
+                    : "text-[#dbdee1] hover:bg-[#36393f]"
                 }`}
+                style={selectedQuestId === quest.questId ? { boxShadow: "0 4px 12px rgba(88, 101, 242, 0.3)" } : undefined}
               >
                 {quest.color && (
                   <div
