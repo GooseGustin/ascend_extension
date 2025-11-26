@@ -4,6 +4,7 @@ import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { TaskList } from "./TaskList";
 import { ProgressHeatmap } from "./ProgressHeatmap";
+import { QuestSelectDropdown } from "./QuestSelectDropdown";
 import {
   AnalyticsService,
   AuthService,
@@ -20,21 +21,25 @@ import { FloatingPlusButton } from "./FloatingPlusButton";
 interface MainPanelProps {
   userId: string;
   tasks: Task[];
-  // workerQuests: Quest[];
+  workerQuests?: Quest[];
+  selectedQuestId?: string | null;
   onToggleTask: (taskId: string) => void;
   onReorderTasks: (startIndex: number, endIndex: number) => void;
   onStartFocus: (task: Task | Subtask, questTitle?: string) => void;
   onFloatingPlusClick: () => void;
+  onQuestSelect?: (questId: string) => void;
 }
 
 export function MainPanel({
   userId,
   tasks,
-  // workerQuests,
+  workerQuests = [],
+  selectedQuestId,
   onToggleTask,
   onReorderTasks,
   onStartFocus,
   onFloatingPlusClick,
+  onQuestSelect,
 }: MainPanelProps) {
   const [filter, setFilter] = useState<"all" | "scheduled" | "pomodoro">("all");
   const [stats, setStats] = useState<TodayMetrics | null>(null);
