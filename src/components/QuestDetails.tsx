@@ -272,20 +272,7 @@ export function QuestDetails({
   };
 
   const showEditForm = () => {
-    showModal(
-      <QuestEditForm
-        quest={quest}
-        onSaveQuest={async (updates) => {
-          try {
-            hideModal();
-            onUpdateQuest?.(quest.questId, updates);
-          } catch (error) {
-            console.error("Failed to save quest:", error);
-          }
-        }}
-        onCancel={() => hideModal()}
-      />
-    );
+    onEditModeStart?.(quest);
   };
 
   const progress = Math.round(
