@@ -52,6 +52,8 @@ export function QuestsMainPanel({
   onArchiveQuest,
   onUpdateQuest,
 }: QuestsMainPanelProps) {
+  const [editMode, setEditMode] = useState(false);
+  const [editingQuest, setEditingQuest] = useState<Quest | null>(null);
   const selectedQuest = selectedQuestId ? quests.find(q => q.questId === selectedQuestId) : null;
 
   if (createQuestMode) {
