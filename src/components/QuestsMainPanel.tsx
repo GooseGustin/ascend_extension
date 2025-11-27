@@ -67,6 +67,25 @@ export function QuestsMainPanel({
     );
   }
 
+  if (editMode && editingQuest) {
+    return (
+      <Suspense fallback={<div>Loading form...</div>}>
+        <QuestEditForm
+          quest={editingQuest}
+          onSaveQuest={(updates) => {
+            onUpdateQuest?.(editingQuest.questId, updates);
+            setEditMode(false);
+            setEditingQuest(null);
+          }}
+          onCancel={() => {
+            setEditMode(false);
+            setEditingQuest(null);
+          }}
+        />
+      </Suspense>
+    );
+  }
+
   if (discoveryMode) {
     return (
       <DiscoveryView
