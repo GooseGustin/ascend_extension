@@ -14,15 +14,18 @@ interface OverviewDashboardProps {
 }
 
 export function OverviewDashboard({ userId, timeView = 'overview' }: OverviewDashboardProps) {
-  const [isLoading, setIsLoading] = useState(true);
+  const [hasAnimated, setHasAnimated] = useState(false);
 
   useEffect(() => {
-    setIsLoading(false);
-  }, []);
+    // Trigger animations when component mounts or timeView changes
+    setHasAnimated(false);
+    const timer = setTimeout(() => setHasAnimated(true), 10);
+    return () => clearTimeout(timer);
+  }, [timeView]);
 
   const animationStyle = (index: number) => ({
-    animation: isLoading ? 'none' : `slideUp 0.6s ease-out ${index * 0.1}s forwards`,
-    opacity: isLoading ? 0 : 1,
+    animation: hasAnimated ? `slideUp 0.6s ease-out ${index * 0.1}s both` : 'none',
+    opacity: hasAnimated ? 1 : 0,
   });
 
   return (
