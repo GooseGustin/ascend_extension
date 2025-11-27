@@ -720,6 +720,9 @@ export default function App() {
           onCancelCreate={handleCancelCreate}
           onAddSubtask={handleAddSubtask}
           onFloatingPlusClick={handleFloatingPlusClick}
+          onDeleteQuest={handleDeleteQuest}
+          onArchiveQuest={handleArchiveQuest}
+          onUpdateQuest={handleUpdateQuest}
         />
       )}
       {activeNav === "progress" && (
