@@ -58,6 +58,7 @@ export function QuestDetails({
   onArchiveQuest,
   onUpdateQuest,
 }: QuestDetailsProps) {
+  const { showModal, hideModal } = useModal();
   const [expandedSections, setExpandedSections] = useState({
     milestones: true,
     subtasks: true,
