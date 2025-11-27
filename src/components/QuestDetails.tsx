@@ -58,6 +58,7 @@ export function QuestDetails({
   onDeleteQuest,
   onArchiveQuest,
   onUpdateQuest,
+  onEditModeStart,
 }: QuestDetailsProps) {
   const { showModal, hideModal } = useModal();
   const [expandedSections, setExpandedSections] = useState({
