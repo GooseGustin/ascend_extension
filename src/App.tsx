@@ -711,6 +711,9 @@ export default function App() {
           onAddSubtask={handleAddSubtask}
         />
       )}
+      {activeNav === "settings" && (
+        <SettingsMainPanel selectedSection={selectedSettingsSection} />
+      )}
       {activeNav === "quests" && (
         <QuestsMainPanel
           quests={workerQuests}
