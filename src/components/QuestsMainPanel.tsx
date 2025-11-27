@@ -1,10 +1,11 @@
-import { Suspense } from 'react';
+import { Suspense, useState } from 'react';
 import { QuestDetails } from './QuestDetails';
 import { DiscoveryView } from './DiscoveryView';
 import type { Quest, Subtask } from '../worker/models/Quest';
 import type { GoalComment } from '../worker/models/GoalComment';
 import { Task } from '../App';
 import { QuestCreationForm } from './QuestCreationForm';
+import { QuestEditForm } from './QuestEditForm';
 // import { FloatingPlusButton } from './FloatingPlusButton';
 
 interface QuestsMainPanelProps {
