@@ -7,6 +7,8 @@ import { QuestsMainPanel } from "./components/QuestsMainPanel";
 import { FocusSessionModal } from "./components/FocusSessionModal";
 import { ProgressMainPanel } from "./components/ProgressMainPanel";
 import { ProgressMiddlePanel } from "./components/ProgressMiddlePanel";
+import { SettingsMiddlePanel } from "./components/SettingsMiddlePanel";
+import { SettingsMainPanel } from "./components/SettingsMainPanel";
 // import { FloatingPlusButton } from "./components/FloatingPlusButton";
 import {
   AuthService,
