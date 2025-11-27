@@ -689,6 +689,12 @@ export default function App() {
           // userId={userId!}
         />
       )}
+      {activeNav === "settings" && (
+        <SettingsMiddlePanel
+          selectedSection={selectedSettingsSection}
+          onSectionSelect={setSelectedSettingsSection}
+        />
+      )}
 
       {/* Conditional Main Panel */}
       {activeNav === "home" && (
