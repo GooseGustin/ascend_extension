@@ -44,6 +44,7 @@ interface QuestDetailsProps {
   onDeleteQuest?: (questId: string) => void;
   onArchiveQuest?: (questId: string) => void;
   onUpdateQuest?: (questId: string, updates: Partial<Quest>) => void;
+  onEditModeStart?: (quest: Quest) => void;
 }
 
 export function QuestDetails({
