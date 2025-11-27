@@ -65,6 +65,7 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [progressView, setProgressView] = useState("overview");
+  const [selectedSettingsSection, setSelectedSettingsSection] = useState("account");
 
   // Worker data
   const [workerQuests, setWorkerQuests] = useState<WorkerQuest[]>([]);
