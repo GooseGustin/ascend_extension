@@ -22,6 +22,13 @@ export function QuestEditForm({
   onSaveQuest,
   onCancel,
 }: QuestEditFormProps) {
+  // Map quest type to internal representation
+  const questTypeMap = {
+    Quest: "personal" as const,
+    DungeonQuest: "dungeon" as const,
+    TodoQuest: "guild" as const,
+  };
+  const internalQuestType = questTypeMap[quest.type] || "personal";
   const [title, setTitle] = useState(quest.title);
   const [description, setDescription] = useState(quest.description);
   const [priority, setPriority] = useState<"A" | "B" | "C">(quest.priority);
