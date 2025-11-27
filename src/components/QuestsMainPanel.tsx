@@ -111,6 +111,10 @@ export function QuestsMainPanel({
         onDeleteQuest={onDeleteQuest}
         onArchiveQuest={onArchiveQuest}
         onUpdateQuest={onUpdateQuest}
+        onEditModeStart={(quest) => {
+          setEditingQuest(quest);
+          setEditMode(true);
+        }}
       />
     );
   }
