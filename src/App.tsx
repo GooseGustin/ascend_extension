@@ -523,6 +523,63 @@ export default function App() {
     }
   };
 
+  const handleDeleteQuest = async (questId: string) => {
+    if (!userId) return;
+
+    try {
+      await questService.deleteQuest(questId);
+
+      // Remove from state
+      setWorkerQuests((prev) => prev.filter((q) => q.questId !== questId));
+
+      // Clear selection if deleted quest was selected
+      if (selectedQuestId === questId) {
+        setSelectedQuestId(null);
+      }
+    } catch (error) {
+      console.error("Failed to delete quest:", error);
+    }
+  };
+
+  const handleArchiveQuest = async (questId: string) => {
+    if (!userId) return;
+
+    try {
+      await questService.archiveQuest(questId);
+
+      // Update state
+      setWorkerQuests((prev) =>
+        prev.map((q) =>
+          q.questId === questId ? { ...q, hidden: true } : q
+        )
+      );
+
+      // Clear selection if archived quest was selected
+      if (selectedQuestId === questId) {
+        setSelectedQuestId(null);
+      }
+    } catch (error) {
+      console.error("Failed to archive quest:", error);
+    }
+  };
+
+  const handleUpdateQuest = async (questId: string, updates: Partial<Quest>) => {
+    if (!userId) return;
+
+    try {
+      await questService.updateQuest(questId, updates);
+
+      // Update state
+      setWorkerQuests((prev) =>
+        prev.map((q) =>
+          q.questId === questId ? { ...q, ...updates } : q
+        )
+      );
+    } catch (error) {
+      console.error("Failed to update quest:", error);
+    }
+  };
+
   const startFocusWithModal = async (
     task: Task | Subtask,
     questTitle?: string
