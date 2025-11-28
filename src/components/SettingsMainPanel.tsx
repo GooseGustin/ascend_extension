@@ -164,7 +164,7 @@ export function SettingsMainPanel({
             </div>
 
             <ExpandableSection title="Change Password">
-              <div className="space-y-4">
+              <div className="space-y-5">
                 <TextInput
                   label="Old Password"
                   value={settings.oldPassword}
@@ -195,14 +195,14 @@ export function SettingsMainPanel({
 
       case "notifications":
         return (
-          <div className="space-y-6">
+          <div className="space-y-8">
             <SectionHeader
               icon={<Bell className="w-6 h-6" />}
               title="Notifications"
               description="Control when and how Ascend notifies you"
             />
 
-            <div className="space-y-4">
+            <div className="space-y-5">
               <Toggle
                 label="Daily Summary"
                 description="Get a summary of your tasks at a preferred time"
@@ -251,7 +251,7 @@ export function SettingsMainPanel({
 
       case "appearance":
         return (
-          <div className="space-y-6">
+          <div className="space-y-8">
             <SectionHeader
               icon={<Palette className="w-6 h-6" />}
               title="Appearance"
@@ -305,7 +305,7 @@ export function SettingsMainPanel({
 
       case "productivity":
         return (
-          <div className="space-y-6">
+          <div className="space-y-8">
             <SectionHeader
               icon={<Clock className="w-6 h-6" />}
               title="Productivity Preferences"
@@ -423,7 +423,7 @@ export function SettingsMainPanel({
 
       case "grandmaster-ai":
         return (
-          <div className="space-y-6">
+          <div className="space-y-8">
             <SectionHeader
               icon={<Brain className="w-6 h-6" />}
               title="Grandmaster AI"
@@ -510,7 +510,7 @@ export function SettingsMainPanel({
 
       case "data-storage":
         return (
-          <div className="space-y-6">
+          <div className="space-y-8">
             <SectionHeader
               icon={<Database className="w-6 h-6" />}
               title="Data & Storage"
@@ -562,7 +562,7 @@ export function SettingsMainPanel({
 
       case "extension":
         return (
-          <div className="space-y-6">
+          <div className="space-y-8">
             <SectionHeader
               icon={<Puzzle className="w-6 h-6" />}
               title="Extension Settings"
@@ -603,7 +603,7 @@ export function SettingsMainPanel({
 
       case "about":
         return (
-          <div className="space-y-6">
+          <div className="space-y-8">
             <SectionHeader
               icon={<Info className="w-6 h-6" />}
               title="About"
@@ -657,7 +657,7 @@ export function SettingsMainPanel({
 
       case "danger-zone":
         return (
-          <div className="space-y-6">
+          <div className="space-y-8">
             <SectionHeader
               icon={<AlertTriangle className="w-6 h-6" />}
               title="Danger Zone"
