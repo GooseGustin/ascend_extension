@@ -382,11 +382,13 @@ export function SectionHeader({
   description,
 }: SectionHeaderProps) {
   return (
-    <div className="flex items-start gap-3 mb-6 pb-6 border-b border-[#202225]">
+    <div className="flex items-start gap-3 mb-8 pb-8 border-b border-[#202225]">
       <div className="text-[#5865F2] flex-shrink-0 mt-1">{icon}</div>
       <div className="flex-1 min-w-0">
-        <h2 className="text-2xl font-bold text-white mb-1">{title}</h2>
-        <p className="text-sm text-[#b9bbbe]">{description}</p>
+        <div className="flex flex-wrap items-baseline gap-2">
+          <h2 className="text-xl font-bold text-white">{title}</h2>
+          <p className="text-sm text-[#72767d]">{description}</p>
+        </div>
       </div>
     </div>
   );
