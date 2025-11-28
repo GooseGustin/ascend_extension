@@ -335,7 +335,7 @@ export function SettingsButton({
       ? "bg-[#ED4245] text-white hover:bg-[#c03537]"
       : variant === "secondary"
         ? "bg-[#4f545c] text-[#dcddde] hover:bg-[#5d6269]"
-        : "bg-[#5865F2] text-white hover:bg-[#4752C4]";
+        : "bg-[#5865F2] hover:bg-[#4752C4] text-white";
 
   return (
     <div>
