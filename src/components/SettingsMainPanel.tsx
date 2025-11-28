@@ -312,12 +312,12 @@ export function SettingsMainPanel({
               description="Set defaults for your tasks and focus sessions"
             />
 
-            <div className="space-y-6">
+            <div className="space-y-8">
               <div>
                 <h4 className="text-sm font-semibold text-[#dcddde] mb-4">
                   Pomodoro Defaults
                 </h4>
-                <div className="space-y-4">
+                <div className="space-y-5">
                   <NumberInput
                     label="Focus Duration"
                     value={settings.defaultFocusDuration}
@@ -358,11 +358,11 @@ export function SettingsMainPanel({
                 </div>
               </div>
 
-              <div className="pt-4 border-t border-[#202225]">
+              <div className="pt-6 border-t border-[#202225]">
                 <h4 className="text-sm font-semibold text-[#dcddde] mb-4">
                   Task Defaults
                 </h4>
-                <div className="space-y-4">
+                <div className="space-y-5">
                   <Select
                     label="Default Priority"
                     value={settings.defaultTaskPriority}
@@ -387,11 +387,11 @@ export function SettingsMainPanel({
                 </div>
               </div>
 
-              <div className="pt-4 border-t border-[#202225]">
+              <div className="pt-6 border-t border-[#202225]">
                 <h4 className="text-sm font-semibold text-[#dcddde] mb-4">
                   Quest Defaults
                 </h4>
-                <div className="space-y-4">
+                <div className="space-y-5">
                   <Select
                     label="Default Quest Type"
                     value={settings.defaultQuestType}
@@ -464,11 +464,11 @@ export function SettingsMainPanel({
               ]}
             />
 
-            <div className="pt-4 border-t border-[#202225]">
+            <div className="pt-6 border-t border-[#202225]">
               <h4 className="text-sm font-semibold text-[#dcddde] mb-4">
                 Auto Suggestions
               </h4>
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <Toggle
                   label="Daily Plan Suggestions"
                   checked={settings.dailyPlanSuggestions}
@@ -620,7 +620,7 @@ export function SettingsMainPanel({
               </p>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-3">
               <a
                 href="#"
                 className="block text-sm text-[#5865F2] hover:text-[#4752C4] transition-colors"
@@ -704,7 +704,7 @@ export function SettingsMainPanel({
   return (
     <div className="flex-1 bg-[#36393f] flex flex-col overflow-hidden">
       {/* Content Area */}
-      <div className="flex-1 overflow-y-auto p-8">
+      <div className="flex-1 overflow-y-auto px-8 py-8">
         <div className="max-w-2xl">{renderSection()}</div>
       </div>
 
