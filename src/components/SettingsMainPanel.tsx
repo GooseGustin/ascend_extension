@@ -29,6 +29,18 @@ interface SettingsMainPanelProps {
   selectedSection: string;
 }
 
+const sectionTitles: { [key: string]: string } = {
+  account: "Account",
+  notifications: "Notifications",
+  appearance: "Appearance",
+  productivity: "Productivity",
+  "grandmaster-ai": "Grandmaster AI",
+  "data-storage": "Data & Storage",
+  extension: "Extension",
+  about: "About",
+  "danger-zone": "Danger Zone",
+};
+
 export function SettingsMainPanel({
   selectedSection,
 }: SettingsMainPanelProps) {
