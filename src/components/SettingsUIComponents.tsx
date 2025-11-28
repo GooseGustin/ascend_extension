@@ -344,7 +344,7 @@ export function SettingsButton({
   description,
 }: ButtonProps) {
   const baseClass =
-    "px-5 py-2 rounded text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed";
+    "px-8 py-2 rounded text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed";
 
   const variantClass =
     variant === "danger"
