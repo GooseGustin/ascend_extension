@@ -1,4 +1,41 @@
 import { ReactNode, useState } from "react";
+import { Checkbox as UICheckbox } from "./ui/checkbox";
+
+/* ===== CHECKBOX ===== */
+interface CheckboxProps {
+  label: string;
+  description?: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  disabled?: boolean;
+}
+
+export function Checkbox({
+  label,
+  description,
+  checked,
+  onChange,
+  disabled = false,
+}: CheckboxProps) {
+  return (
+    <div className="flex items-start gap-3 p-3 bg-[#2f3136] rounded border border-[#202225] hover:border-[#34373c] transition-colors">
+      <UICheckbox
+        checked={checked}
+        onCheckedChange={onChange}
+        disabled={disabled}
+        className="mt-1 flex-shrink-0"
+      />
+      <div className="flex-1">
+        <label className="text-sm font-medium text-[#dcddde] block cursor-pointer">
+          {label}
+        </label>
+        {description && (
+          <p className="text-xs text-[#72767d] mt-1">{description}</p>
+        )}
+      </div>
+    </div>
+  );
+}
 
 /* ===== CONTROL GROUP ===== */
 interface ControlGroupProps {
