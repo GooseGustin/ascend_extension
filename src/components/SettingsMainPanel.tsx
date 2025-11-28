@@ -718,7 +718,7 @@ export function SettingsMainPanel({
     <div className="flex-1 bg-[#36393f] flex flex-col overflow-hidden">
       {/* Title Bar */}
       <div className="h-12 px-6 flex items-center border-b border-[#202225] shrink-0">
-        <span className="text-white">Settings</span>
+        <span className="text-white">{sectionTitles[selectedSection] || "Settings"}</span>
       </div>
 
       {/* Content Area */}
