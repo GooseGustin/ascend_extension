@@ -704,17 +704,22 @@ export function SettingsMainPanel({
 
   return (
     <div className="flex-1 bg-[#36393f] flex flex-col overflow-hidden">
+      {/* Title Bar */}
+      <div className="h-12 px-6 flex items-center border-b border-[#202225] shrink-0">
+        <span className="text-white">Settings</span>
+      </div>
+
       {/* Content Area */}
-      <div className="flex-1 overflow-y-auto px-8 py-8">
+      <div className="flex-1 overflow-y-auto p-6">
         <div className="max-w-2xl">{renderSection()}</div>
       </div>
 
       {/* Save Button */}
-      <div className="border-t border-[#202225] bg-[#2f3136] px-8 py-4 flex justify-end gap-3">
-        <button className="px-8 py-2 rounded text-sm text-[#dbdee1] bg-[#202225] hover:bg-[#4f545c] transition-colors font-medium">
+      <div className="border-t border-[#202225] bg-[#2f3136] px-6 py-4 flex justify-end gap-3">
+        <button className="px-10 py-2 rounded text-sm text-[#dbdee1] bg-[#202225] hover:bg-[#4f545c] transition-colors font-medium">
           Cancel
         </button>
-        <button className="px-8 py-2 rounded text-sm text-white bg-[#5865F2] hover:bg-[#4752C4] transition-colors font-medium">
+        <button className="px-10 py-2 rounded text-sm text-white bg-[#5865F2] hover:bg-[#4752C4] transition-colors font-medium">
           Save Changes
         </button>
       </div>
