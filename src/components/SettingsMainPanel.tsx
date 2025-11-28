@@ -216,7 +216,7 @@ export function SettingsMainPanel({
             />
 
             <div className="space-y-5">
-              <Toggle
+              <Checkbox
                 label="Daily Summary"
                 description="Get a summary of your tasks at a preferred time"
                 checked={settings.dailySummary}
@@ -236,14 +236,14 @@ export function SettingsMainPanel({
                 </div>
               )}
 
-              <Toggle
+              <Checkbox
                 label="Task Due Reminders"
                 description="Notify me when tasks are due"
                 checked={settings.taskDueReminders}
                 onChange={(val) => handleSettingChange("taskDueReminders", val)}
               />
 
-              <Toggle
+              <Checkbox
                 label="Quest Schedule Reminders"
                 description="Remind me about scheduled quests"
                 checked={settings.questScheduleReminders}
@@ -252,7 +252,7 @@ export function SettingsMainPanel({
                 }
               />
 
-              <Toggle
+              <Checkbox
                 label="Grandmaster AI Nudges"
                 description="Gentle reminders about inactive quests and productivity tips"
                 checked={settings.aiNudges}
