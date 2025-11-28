@@ -32,14 +32,14 @@ export function SettingsMiddlePanel({
   onSectionSelect,
 }: SettingsMiddlePanelProps) {
   return (
-    <div className="w-80 bg-[#2f3136] border-r border-[#202225] flex flex-col overflow-hidden">
+    <div className="w-60 bg-[#2f3136] border-r border-[#202225] flex flex-col overflow-hidden">
       {/* Header */}
       <div className="h-12 px-4 flex items-center border-b border-[#202225] shrink-0">
-        <h2 className="text-lg text-white font-bold">Settings</h2>
+        <h2 className="text-lg text-white font-bold uppercase">Settings</h2>
       </div>
 
       {/* Navigation Items */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-1">
+      <div className="flex-1 overflow-y-auto p-4 space-y-2">
         {sections.map((section) => {
           const Icon = section.icon;
           const isActive = selectedSection === section.id;
