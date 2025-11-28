@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useModal } from "../context/ModalContext";
-import { Checkbox as UICheckbox } from "./ui/checkbox";
+import { Button } from "./ui/button";
 import {
   SectionHeader,
-  Toggle,
+  Checkbox,
   TextInput,
   NumberInput,
   Select,
