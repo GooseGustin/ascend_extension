@@ -710,10 +710,10 @@ export function SettingsMainPanel({
 
       {/* Save Button */}
       <div className="border-t border-[#202225] bg-[#2f3136] px-8 py-4 flex justify-end gap-3">
-        <button className="px-6 py-2 rounded text-sm text-[#dbdee1] bg-[#202225] hover:bg-[#4f545c] transition-colors font-medium">
+        <button className="px-8 py-2 rounded text-sm text-[#dbdee1] bg-[#202225] hover:bg-[#4f545c] transition-colors font-medium">
           Cancel
         </button>
-        <button className="px-6 py-2 rounded text-sm text-white bg-[#5865F2] hover:bg-[#4752C4] transition-colors font-medium">
+        <button className="px-8 py-2 rounded text-sm text-white bg-[#5865F2] hover:bg-[#4752C4] transition-colors font-medium">
           Save Changes
         </button>
       </div>
