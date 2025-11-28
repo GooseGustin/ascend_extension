@@ -139,7 +139,7 @@ export function SettingsMainPanel({
     switch (selectedSection) {
       case "account":
         return (
-          <div className="space-y-8">
+          <div className="space-y-10">
             <SectionHeader
               icon={<User className="w-6 h-6" />}
               title="Account"
@@ -208,7 +208,7 @@ export function SettingsMainPanel({
 
       case "notifications":
         return (
-          <div className="space-y-8">
+          <div className="space-y-10">
             <SectionHeader
               icon={<Bell className="w-6 h-6" />}
               title="Notifications"
@@ -264,7 +264,7 @@ export function SettingsMainPanel({
 
       case "appearance":
         return (
-          <div className="space-y-8">
+          <div className="space-y-10">
             <SectionHeader
               icon={<Palette className="w-6 h-6" />}
               title="Appearance"
@@ -318,7 +318,7 @@ export function SettingsMainPanel({
 
       case "productivity":
         return (
-          <div className="space-y-8">
+          <div className="space-y-10">
             <SectionHeader
               icon={<Clock className="w-6 h-6" />}
               title="Productivity Preferences"
@@ -436,7 +436,7 @@ export function SettingsMainPanel({
 
       case "grandmaster-ai":
         return (
-          <div className="space-y-8">
+          <div className="space-y-10">
             <SectionHeader
               icon={<Brain className="w-6 h-6" />}
               title="Grandmaster AI"
@@ -523,7 +523,7 @@ export function SettingsMainPanel({
 
       case "data-storage":
         return (
-          <div className="space-y-8">
+          <div className="space-y-10">
             <SectionHeader
               icon={<Database className="w-6 h-6" />}
               title="Data & Storage"
@@ -575,7 +575,7 @@ export function SettingsMainPanel({
 
       case "extension":
         return (
-          <div className="space-y-8">
+          <div className="space-y-10">
             <SectionHeader
               icon={<Puzzle className="w-6 h-6" />}
               title="Extension Settings"
@@ -616,7 +616,7 @@ export function SettingsMainPanel({
 
       case "about":
         return (
-          <div className="space-y-8">
+          <div className="space-y-10">
             <SectionHeader
               icon={<Info className="w-6 h-6" />}
               title="About"
@@ -656,7 +656,7 @@ export function SettingsMainPanel({
                 href="#"
                 className="block text-sm text-[#5865F2] hover:text-[#4752C4] transition-colors"
               >
-                📜 Terms of Service
+                ���� Terms of Service
               </a>
             </div>
 
@@ -670,7 +670,7 @@ export function SettingsMainPanel({
 
       case "danger-zone":
         return (
-          <div className="space-y-8">
+          <div className="space-y-10">
             <SectionHeader
               icon={<AlertTriangle className="w-6 h-6" />}
               title="Danger Zone"
