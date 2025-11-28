@@ -15,59 +15,6 @@ export function ControlGroup({
   return <div className={spacingClass}>{children}</div>;
 }
 
-/* ===== CHECKBOX ===== */
-interface CheckboxProps {
-  label: string;
-  description?: string;
-  checked: boolean;
-  onChange: (checked: boolean) => void;
-  disabled?: boolean;
-}
-
-export function Checkbox({
-  label,
-  description,
-  checked,
-  onChange,
-  disabled = false,
-}: CheckboxProps) {
-  return (
-    <div className="flex items-start gap-3 p-3 bg-[#2f3136] rounded border border-[#202225] hover:border-[#34373c] transition-colors">
-      <button
-        onClick={() => !disabled && onChange(!checked)}
-        disabled={disabled}
-        className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-colors ${
-          checked
-            ? "bg-[#5865F2] border-[#5865F2]"
-            : "border-[#72767d] hover:border-[#b9bbbe]"
-        } ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
-      >
-        {checked && (
-          <svg
-            className="w-3 h-3 text-white"
-            fill="currentColor"
-            viewBox="0 0 20 20"
-          >
-            <path
-              fillRule="evenodd"
-              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-              clipRule="evenodd"
-            />
-          </svg>
-        )}
-      </button>
-      <div className="flex-1">
-        <label className="text-sm font-medium text-[#dcddde] block cursor-pointer">
-          {label}
-        </label>
-        {description && (
-          <p className="text-xs text-[#72767d] mt-1">{description}</p>
-        )}
-      </div>
-    </div>
-  );
-}
-
 /* ===== LABEL & DESCRIPTION ===== */
 interface LabelProps {
   label: string;
