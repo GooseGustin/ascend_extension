@@ -126,7 +126,7 @@ export function SettingsMainPanel({
     switch (selectedSection) {
       case "account":
         return (
-          <div className="space-y-6">
+          <div className="space-y-8">
             <SectionHeader
               icon={<User className="w-6 h-6" />}
               title="Account"
