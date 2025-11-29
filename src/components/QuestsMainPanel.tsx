@@ -1,10 +1,11 @@
-import { Suspense } from 'react';
+import { Suspense, useState } from 'react';
 import { QuestDetails } from './QuestDetails';
 import { DiscoveryView } from './DiscoveryView';
 import type { Quest, Subtask } from '../worker/models/Quest';
 import type { GoalComment } from '../worker/models/GoalComment';
 import { Task } from '../App';
 import { QuestCreationForm } from './QuestCreationForm';
+import { QuestEditForm } from './QuestEditForm';
 // import { FloatingPlusButton } from './FloatingPlusButton';
 
 interface QuestsMainPanelProps {
@@ -21,10 +22,13 @@ interface QuestsMainPanelProps {
   onToggleSubtask: (questId: string, subtaskId: string) => void;
   onAddComment?: (questId: string, text: string) => void;
   // onCreateQuest: (quest: Omit<Quest, 'id' | 'currentXP' | 'progress'>) => void;
-  onCreateQuest: () => void; 
+  onCreateQuest: () => void;
   onCancelCreate: () => void;
   onAddSubtask: (questId: string, title: string) => void;
   onFloatingPlusClick: () => void;
+  onDeleteQuest?: (questId: string) => void;
+  onArchiveQuest?: (questId: string) => void;
+  onUpdateQuest?: (questId: string, updates: Partial<Quest>) => void;
 }
 
 export function QuestsMainPanel({
@@ -32,7 +36,7 @@ export function QuestsMainPanel({
   tasks,
   selectedQuestId,
   discoveryMode,
-  createQuestMode, 
+  createQuestMode,
   questComments,
   publicQuests = [],
   onStartFocus,
@@ -44,7 +48,12 @@ export function QuestsMainPanel({
   onCancelCreate,
   onAddSubtask,
   onFloatingPlusClick,
+  onDeleteQuest,
+  onArchiveQuest,
+  onUpdateQuest,
 }: QuestsMainPanelProps) {
+  const [editMode, setEditMode] = useState(false);
+  const [editingQuest, setEditingQuest] = useState<Quest | null>(null);
   const selectedQuest = selectedQuestId ? quests.find(q => q.questId === selectedQuestId) : null;
 
   if (createQuestMode) {
@@ -53,6 +62,25 @@ export function QuestsMainPanel({
         <QuestCreationForm
           onCreateQuest={onCreateQuest}
           onCancel={onCancelCreate}
+        />
+      </Suspense>
+    );
+  }
+
+  if (editMode && editingQuest) {
+    return (
+      <Suspense fallback={<div>Loading form...</div>}>
+        <QuestEditForm
+          quest={editingQuest}
+          onSaveQuest={(updates) => {
+            onUpdateQuest?.(editingQuest.questId, updates);
+            setEditMode(false);
+            setEditingQuest(null);
+          }}
+          onCancel={() => {
+            setEditMode(false);
+            setEditingQuest(null);
+          }}
         />
       </Suspense>
     );
@@ -80,6 +108,13 @@ export function QuestsMainPanel({
         onToggleSubtask={onToggleSubtask}
         onAddSubtask={onAddSubtask}
         onAddComment={onAddComment}
+        onDeleteQuest={onDeleteQuest}
+        onArchiveQuest={onArchiveQuest}
+        onUpdateQuest={onUpdateQuest}
+        onEditModeStart={(quest) => {
+          setEditingQuest(quest);
+          setEditMode(true);
+        }}
       />
     );
   }

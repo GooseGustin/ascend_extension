@@ -464,18 +464,18 @@ export function QuestCreationForm({
             </div>
 
             {/* Tags */}
-            <div className="bg-[#2f3136] p-4 rounded-lg border border-[#202225]">
-              <label className="block text-sm text-[#b9bbbe] mb-3">Tags</label>
-              <div className="flex gap-2 mb-3 flex-wrap">
+            <div>
+              <label className="block text-sm text-[#b9bbbe] mb-2 font-medium">Tags</label>
+              <div className="flex flex-wrap gap-2 mb-3">
                 {tags.map((tag) => (
                   <span
                     key={tag}
-                    className="px-3 py-1 bg-[#5865F2] bg-opacity-20 text-[#5865F2] rounded-full text-sm flex items-center gap-2 border border-[#5865F2] border-opacity-30"
+                    className="bg-[#5865F2] text-white px-3 py-1 rounded text-sm flex items-center gap-2"
                   >
-                    #{tag}
+                    {tag}
                     <button
                       onClick={() => handleRemoveTag(tag)}
-                      className="hover:text-white"
+                      className="hover:text-[#dcddde]"
                     >
                       <X className="w-3 h-3" />
                     </button>
@@ -490,14 +490,14 @@ export function QuestCreationForm({
                   onKeyDown={(e) =>
                     e.key === "Enter" && (e.preventDefault(), handleAddTag())
                   }
-                  placeholder="Add tag..."
-                  className="flex-1 bg-[#202225] text-white px-3 py-2 rounded border-2 border-transparent focus:border-[#5865F2] outline-none transition-colors"
+                  placeholder="Add a tag..."
+                  className="flex-1 bg-[#2f3136] border border-[#202225] rounded px-3 py-2 text-white placeholder:text-[#72767d] focus:outline-none focus:border-[#5865F2]"
                 />
                 <button
                   onClick={handleAddTag}
-                  className="px-4 py-2 bg-[#5865F2] hover:bg-[#4752C4] rounded transition-colors"
+                  className="bg-[#5865F2] hover:bg-[#4752C4] text-white px-4 py-2 rounded text-sm transition-colors font-medium"
                 >
-                  <Plus className="w-4 h-4 text-white" />
+                  Add
                 </button>
               </div>
             </div>

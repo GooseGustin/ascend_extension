@@ -4,6 +4,7 @@ import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { TaskList } from "./TaskList";
 import { ProgressHeatmap } from "./ProgressHeatmap";
+import { QuestSelectDropdown } from "./QuestSelectDropdown";
 import {
   AnalyticsService,
   AuthService,
@@ -20,25 +21,32 @@ import { FloatingPlusButton } from "./FloatingPlusButton";
 interface MainPanelProps {
   userId: string;
   tasks: Task[];
-  // workerQuests: Quest[];
+  workerQuests?: Quest[];
+  selectedQuestId?: string | null;
   onToggleTask: (taskId: string) => void;
   onReorderTasks: (startIndex: number, endIndex: number) => void;
   onStartFocus: (task: Task | Subtask, questTitle?: string) => void;
   onFloatingPlusClick: () => void;
+  onQuestSelect?: (questId: string) => void;
+  onAddSubtask?: (questId: string, title: string) => void;
 }
 
 export function MainPanel({
   userId,
   tasks,
-  // workerQuests,
+  workerQuests = [],
+  selectedQuestId,
   onToggleTask,
   onReorderTasks,
   onStartFocus,
   onFloatingPlusClick,
+  onQuestSelect,
+  onAddSubtask,
 }: MainPanelProps) {
   const [filter, setFilter] = useState<"all" | "scheduled" | "pomodoro">("all");
   const [stats, setStats] = useState<TodayMetrics | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
 
   const analyticsService = new AnalyticsService();
   const authService = new AuthService();
@@ -58,6 +66,16 @@ export function MainPanel({
       setUserProfile(profile || null);
     } catch (error) {
       console.error("Failed to load stats:", error);
+    }
+  };
+
+  const handleAddSubtaskSubmit = async () => {
+    if (!newSubtaskTitle.trim() || !selectedQuestId) return;
+    try {
+      onAddSubtask?.(selectedQuestId, newSubtaskTitle.trim());
+      setNewSubtaskTitle("");
+    } catch (error) {
+      console.error("Failed to add subtask:", error);
     }
   };
 
@@ -185,11 +203,40 @@ export function MainPanel({
 
           {/* Add Subtask Bar */}
           <div className="mb-6">
-            <div className="relative">
-              <Plus className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#72767d]" />
-              <Input
-                placeholder="Add a quick subtask to any quest..."
-                className="bg-[#202225] border-[#202225] pl-10 h-10 placeholder:text-[#72767d] focus-visible:ring-1 focus-visible:ring-[#00b0f4]"
+            <div className="flex flex-col gap-3">
+              <div className="bg-[#2f3136] rounded px-3 py-2 flex items-center gap-2 border-2 border-transparent hover:border-[#5865F2] transition-colors">
+                <Plus className="w-4 h-4 text-[#72767d]" />
+                <input
+                  type="text"
+                  value={newSubtaskTitle}
+                  onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleAddSubtaskSubmit();
+                    }
+                  }}
+                  placeholder="Add a quick subtask to any quest..."
+                  className="flex-1 bg-transparent text-white text-sm placeholder:text-[#72767d] outline-none border-0"
+                />
+                <button
+                  onClick={handleAddSubtaskSubmit}
+                  disabled={!newSubtaskTitle.trim() || !selectedQuestId}
+                  className="text-[#5865F2] hover:text-[#4752C4] disabled:opacity-0 transition-all text-sm px-2 py-1"
+                >
+                  Add
+                </button>
+              </div>
+
+              <QuestSelectDropdown
+                quests={workerQuests.map((q) => ({
+                  questId: q.questId,
+                  title: q.title,
+                  color: q.color,
+                }))}
+                selectedQuestId={selectedQuestId || null}
+                onSelect={(questId) => onQuestSelect?.(questId)}
+                placeholder="Select a quest..."
               />
             </div>
           </div>

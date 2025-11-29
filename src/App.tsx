@@ -7,6 +7,8 @@ import { QuestsMainPanel } from "./components/QuestsMainPanel";
 import { FocusSessionModal } from "./components/FocusSessionModal";
 import { ProgressMainPanel } from "./components/ProgressMainPanel";
 import { ProgressMiddlePanel } from "./components/ProgressMiddlePanel";
+import { SettingsMiddlePanel } from "./components/SettingsMiddlePanel";
+import { SettingsMainPanel } from "./components/SettingsMainPanel";
 // import { FloatingPlusButton } from "./components/FloatingPlusButton";
 import {
   AuthService,
@@ -63,6 +65,7 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [progressView, setProgressView] = useState("overview");
+  const [selectedSettingsSection, setSelectedSettingsSection] = useState("account");
 
   // Worker data
   const [workerQuests, setWorkerQuests] = useState<WorkerQuest[]>([]);
@@ -523,6 +526,63 @@ export default function App() {
     }
   };
 
+  const handleDeleteQuest = async (questId: string) => {
+    if (!userId) return;
+
+    try {
+      await questService.deleteQuest(questId);
+
+      // Remove from state
+      setWorkerQuests((prev) => prev.filter((q) => q.questId !== questId));
+
+      // Clear selection if deleted quest was selected
+      if (selectedQuestId === questId) {
+        setSelectedQuestId(null);
+      }
+    } catch (error) {
+      console.error("Failed to delete quest:", error);
+    }
+  };
+
+  const handleArchiveQuest = async (questId: string) => {
+    if (!userId) return;
+
+    try {
+      await questService.archiveQuest(questId);
+
+      // Update state
+      setWorkerQuests((prev) =>
+        prev.map((q) =>
+          q.questId === questId ? { ...q, hidden: true } : q
+        )
+      );
+
+      // Clear selection if archived quest was selected
+      if (selectedQuestId === questId) {
+        setSelectedQuestId(null);
+      }
+    } catch (error) {
+      console.error("Failed to archive quest:", error);
+    }
+  };
+
+  const handleUpdateQuest = async (questId: string, updates: Partial<Quest>) => {
+    if (!userId) return;
+
+    try {
+      await questService.updateQuest(questId, updates);
+
+      // Update state
+      setWorkerQuests((prev) =>
+        prev.map((q) =>
+          q.questId === questId ? { ...q, ...updates } : q
+        )
+      );
+    } catch (error) {
+      console.error("Failed to update quest:", error);
+    }
+  };
+
   const startFocusWithModal = async (
     task: Task | Subtask,
     questTitle?: string
@@ -629,18 +689,30 @@ export default function App() {
           // userId={userId!}
         />
       )}
+      {activeNav === "settings" && (
+        <SettingsMiddlePanel
+          selectedSection={selectedSettingsSection}
+          onSectionSelect={setSelectedSettingsSection}
+        />
+      )}
 
       {/* Conditional Main Panel */}
       {activeNav === "home" && (
         <MainPanel
           userId={userId}
           tasks={tasks}
-          // workerQuests={workerQuests}
+          workerQuests={workerQuests}
+          selectedQuestId={selectedQuestId}
           onToggleTask={toggleTaskComplete}
           onReorderTasks={reorderTasks}
           onStartFocus={startFocusWithModal}
           onFloatingPlusClick={handleFloatingPlusClick}
+          onQuestSelect={handleQuestSelect}
+          onAddSubtask={handleAddSubtask}
         />
+      )}
+      {activeNav === "settings" && (
+        <SettingsMainPanel selectedSection={selectedSettingsSection} />
       )}
       {activeNav === "quests" && (
         <QuestsMainPanel
@@ -660,6 +732,9 @@ export default function App() {
           onCancelCreate={handleCancelCreate}
           onAddSubtask={handleAddSubtask}
           onFloatingPlusClick={handleFloatingPlusClick}
+          onDeleteQuest={handleDeleteQuest}
+          onArchiveQuest={handleArchiveQuest}
+          onUpdateQuest={handleUpdateQuest}
         />
       )}
       {activeNav === "progress" && (

@@ -11,6 +11,9 @@ import {
   Calendar,
   Plus,
   GripVertical,
+  Edit,
+  Archive,
+  Trash2,
 } from "lucide-react";
 import { Checkbox } from "./ui/checkbox";
 import { Button } from "./ui/button";
@@ -20,6 +23,7 @@ import type { GoalComment } from "../worker/models/GoalComment";
 import { Task } from "../App";
 import { QuestService } from "../worker";
 import { AuthService, getTaskService } from "../worker";
+import { useModal } from "../context/ModalContext";
 import {
   saveTaskOrder,
   loadTaskOrder,
@@ -36,6 +40,10 @@ interface QuestDetailsProps {
   onToggleSubtask: (questId: string, subtaskId: string) => void;
   onAddComment?: (questId: string, text: string) => void;
   onAddSubtask: (questId: string, title: string) => void;
+  onDeleteQuest?: (questId: string) => void;
+  onArchiveQuest?: (questId: string) => void;
+  onUpdateQuest?: (questId: string, updates: Partial<Quest>) => void;
+  onEditModeStart?: (quest: Quest) => void;
 }
 
 export function QuestDetails({
@@ -46,7 +54,12 @@ export function QuestDetails({
   onToggleSubtask,
   onAddSubtask,
   onAddComment,
+  onDeleteQuest,
+  onArchiveQuest,
+  onUpdateQuest,
+  onEditModeStart,
 }: QuestDetailsProps) {
+  const { showModal, hideModal } = useModal();
   const [expandedSections, setExpandedSections] = useState({
     milestones: true,
     subtasks: true,
@@ -225,6 +238,42 @@ export function QuestDetails({
     }
   };
 
+  const showDeleteConfirmation = () => {
+    showModal(
+      <div className="bg-[#36393f] rounded-lg shadow-lg max-w-md p-6 border border-[#202225]">
+        <h2 className="text-xl text-white font-semibold mb-2">Delete Quest?</h2>
+        <p className="text-sm text-[#b9bbbe] mb-6">
+          This action is permanent and cannot be undone. The quest "{quest.title}" will be permanently deleted.
+        </p>
+        <div className="flex gap-3 justify-end">
+          <button
+            onClick={() => hideModal()}
+            className="px-4 py-2 rounded text-sm text-[#dbdee1] bg-[#2f3136] hover:bg-[#4f545c] transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={async () => {
+              try {
+                hideModal();
+                onDeleteQuest?.(quest.questId);
+              } catch (error) {
+                console.error("Failed to delete quest:", error);
+              }
+            }}
+            className="px-4 py-2 rounded text-sm text-white bg-[#ED4245] hover:bg-[#da373f] transition-colors"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  const showEditForm = () => {
+    onEditModeStart?.(quest);
+  };
+
   const progress = Math.round(
     (quest.gamification.currentExp / quest.gamification.expToNextLevel) * 100
   );
@@ -243,31 +292,58 @@ export function QuestDetails({
   return (
     <div className="flex-1 bg-[#36393f] flex flex-col">
       {/* Title Bar */}
-      <div className="h-12 px-6 flex items-center border-b border-[#202225] shrink-0">
-        <span className="text-xl mr-2">{getIconForQuest(quest)}</span>
-        <span className="text-white">{quest.title}</span>
-        <div
-          className="ml-3 px-2 py-1 rounded text-xs uppercase tracking-wide flex items-center gap-1"
-          style={{
-            backgroundColor: `${getTypeColor()}20`,
-            color: getTypeColor(),
-          }}
-        >
-          {getTypeIcon()}
-          {getTypeLabel()}
+      <div className="h-12 px-6 flex items-center justify-between border-b border-[#202225] shrink-0">
+        <div className="flex items-center gap-3 min-w-0">
+          <span className="text-xl">{getIconForQuest(quest)}</span>
+          <span className="text-white truncate">{quest.title}</span>
+          <div
+            className="px-2 py-1 rounded text-xs uppercase tracking-wide flex items-center gap-1 flex-shrink-0"
+            style={{
+              backgroundColor: `${getTypeColor()}20`,
+              color: getTypeColor(),
+            }}
+          >
+            {getTypeIcon()}
+            {getTypeLabel()}
+          </div>
+          {quest.members && quest.members.length > 0 && (
+            <div className="flex items-center gap-1 text-xs text-[#b9bbbe] flex-shrink-0">
+              <Users className="w-3 h-3" />
+              {quest.members.length} warriors
+            </div>
+          )}
+          {quest.dueDate && (
+            <div className="flex items-center gap-1 text-xs text-[#b9bbbe] flex-shrink-0">
+              <Calendar className="w-3 h-3" />
+              {new Date(quest.dueDate).toLocaleDateString()}
+            </div>
+          )}
         </div>
-        {quest.members && quest.members.length > 0 && (
-          <div className="ml-3 flex items-center gap-1 text-xs text-[#b9bbbe]">
-            <Users className="w-3 h-3" />
-            {quest.members.length} warriors
-          </div>
-        )}
-        {quest.dueDate && (
-          <div className="ml-3 flex items-center gap-1 text-xs text-[#b9bbbe]">
-            <Calendar className="w-3 h-3" />
-            {new Date(quest.dueDate).toLocaleDateString()}
-          </div>
-        )}
+
+        {/* Action Icons */}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <button
+            onClick={() => showEditForm()}
+            className="p-1.5 text-[#72767d] hover:text-[#5865F2] transition-colors rounded hover:bg-[#4f545c]"
+            title="Edit quest"
+          >
+            <Edit className="w-5 h-5" />
+          </button>
+          <button
+            onClick={() => onArchiveQuest?.(quest.questId)}
+            className="p-1.5 text-[#72767d] hover:text-[#FEE75C] transition-colors rounded hover:bg-[#4f545c]"
+            title="Archive quest"
+          >
+            <Archive className="w-5 h-5" />
+          </button>
+          <button
+            onClick={() => showDeleteConfirmation()}
+            className="p-1.5 text-[#72767d] hover:text-[#ED4245] transition-colors rounded hover:bg-[#4f545c]"
+            title="Delete quest"
+          >
+            <Trash2 className="w-5 h-5" />
+          </button>
+        </div>
       </div>
 
       {/* Scrollable Content */}
