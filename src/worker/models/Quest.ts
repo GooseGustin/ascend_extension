@@ -2,6 +2,7 @@
  * Quest Model
  * Complete quest structure from SRS Section 4.2
  */
+export type DifficultyTier = "Trivial" | "Easy" | "Medium" | "Hard" | "Epic";
 
 export interface Quest {
   questId: string;
@@ -17,10 +18,11 @@ export interface Quest {
   color: string; // Hex color code
 
   difficulty: {
-    userAssigned: "Trivial" | "Easy" | "Medium" | "Hard" | "Epic";
+    userAssigned: DifficultyTier;
     gmValidated: string | null;
     isLocked: boolean;
     validatedAt: string | null; // ISO8601
+    confidence?: number; // GM's confidence score (0-1)
     xpPerPomodoro: number;
   };
 
@@ -58,10 +60,17 @@ export interface Quest {
     averageSessionQuality: number; // 0-100
     lastSessionAt: string | null; // ISO8601
   };
+  timeEstimateHours?: number; // Estimated hours for the entire quest
 
-  registeredAt: string; // ISO8601
+  registeredAt: string | null; // ISO8601
   createdAt: string; // ISO8601
   updatedAt: string; // ISO8601
+
+  // GM coaching data
+  gmFeedback?: GMFeedback;
+
+  // Validation status for offline queue handling
+  validationStatus: "pending" | "validated" | "failed" | "queued";
 }
 
 export interface Subtask {
@@ -71,6 +80,21 @@ export interface Subtask {
   isComplete: boolean;
   completedAt: string | null; // ISO8601
   revisionCount: number;
+}
+
+export interface GMFeedback {
+  reasoning: string;
+  recommendations: string[];
+  confidence: number; // 0-1
+  suggestedDifficulty: DifficultyTier;
+  validatedAt: string; // ISO8601
+
+  // Context used for validation (for auditing)
+  context?: {
+    userLevel: number;
+    subtaskComplexity: string;
+    estimatedHours: number;
+  };
 }
 
 export interface ProgressHistoryEntry {

@@ -477,7 +477,7 @@ export function QuestCreationForm({
                       onClick={() => handleRemoveTag(tag)}
                       className="hover:text-white"
                     >
-                      <X className="w-3 h-3" />
+                      <X className="w-3 h-3" />a
                     </button>
                   </span>
                 ))}

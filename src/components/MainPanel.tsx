@@ -20,7 +20,7 @@ import { FloatingPlusButton } from "./FloatingPlusButton";
 interface MainPanelProps {
   userId: string;
   tasks: Task[];
-  // workerQuests: Quest[];
+  workerQuests: Quest[];
   onToggleTask: (taskId: string) => void;
   onReorderTasks: (startIndex: number, endIndex: number) => void;
   onStartFocus: (task: Task | Subtask, questTitle?: string) => void;
@@ -30,7 +30,7 @@ interface MainPanelProps {
 export function MainPanel({
   userId,
   tasks,
-  // workerQuests,
+  workerQuests,
   onToggleTask,
   onReorderTasks,
   onStartFocus,
@@ -39,9 +39,11 @@ export function MainPanel({
   const [filter, setFilter] = useState<"all" | "scheduled" | "pomodoro">("all");
   const [stats, setStats] = useState<TodayMetrics | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-
   const analyticsService = new AnalyticsService();
   const authService = new AuthService();
+  const [newTaskTitle, setNewTaskTitle] = useState("");
+  const [selectedQuestId, setSelectedQuestId] = useState<string | null>(null);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
 
   useEffect(() => {
@@ -60,25 +62,6 @@ export function MainPanel({
       console.error("Failed to load stats:", error);
     }
   };
-
-  // useEffect(() => {
-  //   async function loadTaskOrder() {
-  //     try {
-  //       // const { TaskService } = await import("../worker/services/task.service");
-
-  //       const taskService = getTaskService();
-
-  //       const orderedTasks = await taskService.applySavedOrder(tasks);
-  //       if (JSON.stringify(orderedTasks) !== JSON.stringify(tasks)) {
-  //         onReorderTasks(0, 0); // Trigger parent to update with ordered tasks
-  //       }
-  //     } catch (error) {
-  //       console.error("Failed to load task order:", error);
-  //     }
-  //   }
-
-  //   loadTaskOrder();
-  // }, []); // Only on mount
 
   return (
     <div className="flex-1 bg-[#36393f] flex flex-col">
@@ -186,11 +169,13 @@ export function MainPanel({
           {/* Add Subtask Bar */}
           <div className="mb-6">
             <div className="relative">
+              
               <Plus className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#72767d]" />
               <Input
                 placeholder="Add a quick subtask to any quest..."
                 className="bg-[#202225] border-[#202225] pl-10 h-10 placeholder:text-[#72767d] focus-visible:ring-1 focus-visible:ring-[#00b0f4]"
               />
+              
             </div>
           </div>
 

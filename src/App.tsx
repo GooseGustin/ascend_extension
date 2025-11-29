@@ -635,7 +635,7 @@ export default function App() {
         <MainPanel
           userId={userId}
           tasks={tasks}
-          // workerQuests={workerQuests}
+          workerQuests={workerQuests}
           onToggleTask={toggleTaskComplete}
           onReorderTasks={reorderTasks}
           onStartFocus={startFocusWithModal}

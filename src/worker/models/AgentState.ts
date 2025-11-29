@@ -3,11 +3,34 @@
  * GM/Agent state structure from SRS Section 4.6
  */
 
+// Detailed Performance Metrics for GM consumption
+export interface PerformanceMetrics {
+  weeklyVelocity: number; // XP per hour this week
+  monthlyConsistency: number; // Percentage (0-100)
+  burnoutRisk: 'Low' | 'Medium' | 'High' | 'Critical';
+  
+  // Detailed breakdown
+  averageSessionQuality: number; // 0-100
+  streakDays: number;
+  activeQuestCount: number;
+  overdueQuestCount: number;
+  
+  // Trend indicators
+  velocityTrend: 'improving' | 'stable' | 'declining';
+  consistencyTrend: 'improving' | 'stable' | 'declining';
+  
+  // Last calculated
+  calculatedAt: string; // ISO8601
+}
+
 export interface AgentState {
   userId: string;
-  lastObservationTimestamp: string; // ISO8601
-  
-  patterns: Pattern[];
+  // lastObservationTimestamp: string; // ISO8601
+  // patterns: Pattern[];
+
+  metrics: PerformanceMetrics;
+  detectedPatterns: Pattern[];
+  lastUpdated: string; // ISO8601
   
   recommendedQuestAdjustments: QuestAdjustment[];
   
@@ -34,6 +57,13 @@ export interface Pattern {
   detail: string;
   detectedAt: string; // ISO8601
   severity: 'info' | 'warning' | 'critical';
+
+  // Actionable recommendation
+  suggestedAction?: {
+    type: 'adjust_schedule' | 'reduce_difficulty' | 'take_break' | 'add_subtask';
+    questId?: string;
+    reason: string;
+  };
 }
 
 export interface QuestAdjustment {
