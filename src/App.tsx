@@ -728,10 +728,7 @@ export default function App() {
           userId={userId}
           tasks={tasks}
           workerQuests={workerQuests}
-<<<<<<< HEAD
           selectedQuestId={selectedQuestId}
-=======
->>>>>>> grandmaster
           onToggleTask={toggleTaskComplete}
           onReorderTasks={reorderTasks}
           onStartFocus={startFocusWithModal}
