@@ -21,8 +21,12 @@ import { FloatingPlusButton } from "./FloatingPlusButton";
 interface MainPanelProps {
   userId: string;
   tasks: Task[];
+<<<<<<< HEAD
   workerQuests?: Quest[];
   selectedQuestId?: string | null;
+=======
+  workerQuests: Quest[];
+>>>>>>> grandmaster
   onToggleTask: (taskId: string) => void;
   onReorderTasks: (startIndex: number, endIndex: number) => void;
   onStartFocus: (task: Task | Subtask, questTitle?: string) => void;
@@ -34,8 +38,12 @@ interface MainPanelProps {
 export function MainPanel({
   userId,
   tasks,
+<<<<<<< HEAD
   workerQuests = [],
   selectedQuestId,
+=======
+  workerQuests,
+>>>>>>> grandmaster
   onToggleTask,
   onReorderTasks,
   onStartFocus,
@@ -46,10 +54,16 @@ export function MainPanel({
   const [filter, setFilter] = useState<"all" | "scheduled" | "pomodoro">("all");
   const [stats, setStats] = useState<TodayMetrics | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+<<<<<<< HEAD
   const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
 
+=======
+>>>>>>> grandmaster
   const analyticsService = new AnalyticsService();
   const authService = new AuthService();
+  const [newTaskTitle, setNewTaskTitle] = useState("");
+  const [selectedQuestId, setSelectedQuestId] = useState<string | null>(null);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
 
   useEffect(() => {
@@ -69,6 +83,7 @@ export function MainPanel({
     }
   };
 
+<<<<<<< HEAD
   const handleAddSubtaskSubmit = async () => {
     if (!newSubtaskTitle.trim() || !selectedQuestId) return;
     try {
@@ -98,6 +113,8 @@ export function MainPanel({
   //   loadTaskOrder();
   // }, []); // Only on mount
 
+=======
+>>>>>>> grandmaster
   return (
     <div className="flex-1 bg-[#36393f] flex flex-col">
       {/* Title Bar */}
@@ -203,6 +220,7 @@ export function MainPanel({
 
           {/* Add Subtask Bar */}
           <div className="mb-6">
+<<<<<<< HEAD
             <div className="flex flex-col gap-3">
               <div className="bg-[#2f3136] rounded px-3 py-2 flex items-center gap-2 border-2 border-transparent hover:border-[#5865F2] transition-colors">
                 <Plus className="w-4 h-4 text-[#72767d]" />
@@ -237,7 +255,16 @@ export function MainPanel({
                 selectedQuestId={selectedQuestId || null}
                 onSelect={(questId) => onQuestSelect?.(questId)}
                 placeholder="Select a quest..."
+=======
+            <div className="relative">
+              
+              <Plus className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#72767d]" />
+              <Input
+                placeholder="Add a quick subtask to any quest..."
+                className="bg-[#202225] border-[#202225] pl-10 h-10 placeholder:text-[#72767d] focus-visible:ring-1 focus-visible:ring-[#00b0f4]"
+>>>>>>> grandmaster
               />
+              
             </div>
           </div>
 

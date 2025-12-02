@@ -34,7 +34,6 @@
 ./styles/globals.css
 ./worker/api/remote-client.ts
 ./worker/db/indexed-db.ts
-./worker/implementations/v01-home-quests.md
 ./worker/index.ts
 ./worker/models/ActivityItem.ts
 ./worker/models/AgentState.ts
@@ -52,6 +51,7 @@
 ./worker/services/activity-feed.service.ts
 ./worker/services/analytics.service.ts
 ./worker/services/auth.service.ts
+./src/worker/services/gm/gm.service.ts
 ./worker/services/notification.service.ts
 ./worker/services/quest-ui-adapter.service.ts
 ./worker/services/quest.service.ts

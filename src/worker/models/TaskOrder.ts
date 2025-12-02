@@ -9,6 +9,7 @@ export interface TaskOrderItem {
 }
 
 export interface TaskOrder {
+  id: string;
   userId: string;
   date: string; // YYYY-MM-DD
   questId?: string; // Optional: if set, this is for quest detail view; if null, for home view

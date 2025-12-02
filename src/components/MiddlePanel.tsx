@@ -1,7 +1,14 @@
 import { useEffect, useState } from "react";
 import { Search, Sparkles, MessageCircle, Activity } from "lucide-react";
 import { Input } from "./ui/input";
-import { SearchService, ActivityFeedService } from "../worker";
+import {
+  GMService,
+  AuthService,
+  AnalyticsService,
+  QuestService,
+  SearchService,
+  ActivityFeedService,
+} from "../worker";
 import type { Quest } from "../worker/models/Quest";
 import type { ActivityItem } from "../worker/models/ActivityItem";
 
@@ -13,6 +20,46 @@ export function MiddlePanel({ userId }: MiddlePanelProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<Quest[]>([]);
   const [activityFeed, setActivityFeed] = useState<ActivityItem[]>([]);
+
+  // State to hold the dynamic suggestions
+  const [gmSuggestions, setGmSuggestions] = useState<
+    Array<{ id: string; text: string; type: string }>
+  >([]);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const authService = new AuthService();
+    authService
+      .getCurrentUserId()
+      .then((id) => {
+        setCurrentUserId(id);
+      })
+      .catch(console.error);
+  }, []);
+
+  useEffect(() => {
+    if (!currentUserId) return;
+
+    const fetchGMSuggestions = async () => {
+      try {
+        // The 'as any' cast is used because the frontend's simplified context
+        // may not have the full worker-side imports (like AnalyticsService and QuestService)
+        // ready for instantiation, but the GMService class structure requires them.
+        const gmService = new GMService(
+          new AnalyticsService() as any,
+          new QuestService() as any
+        );
+        const suggestions = await gmService.getHomeSuggestions(
+          currentUserId || userId
+        );
+        setGmSuggestions(suggestions.slice(0, 5)); // Limit to top 5 suggestions
+      } catch (error) {
+        console.error("Failed to fetch GM suggestions:", error);
+        setGmSuggestions([]);
+      }
+    };
+    fetchGMSuggestions();
+  }, [currentUserId]);
 
   const searchService = new SearchService();
   const activityService = new ActivityFeedService();
@@ -56,14 +103,14 @@ export function MiddlePanel({ userId }: MiddlePanelProps) {
     }
   };
 
-  const gmSuggestions = [
-    {
-      id: 1,
-      text: "Complete 3 focus sessions to level up!",
-      type: "challenge",
-    },
-    { id: 2, text: "Your streak is at 7 days. Keep it up!", type: "milestone" },
-  ];
+  // const gmSuggestions = [
+  //   {
+  //     id: 1,
+  //     text: "Complete 3 focus sessions to level up!",
+  //     type: "challenge",
+  //   },
+  //   { id: 2, text: "Your streak is at 7 days. Keep it up!", type: "milestone" },
+  // ];
 
   const watcherComments = [
     {

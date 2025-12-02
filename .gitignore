@@ -1,2 +1,10 @@
 node_modules
 .env
+merge_source_dump.txt
+merge_source_dumper.py
+project_structure.txt
+./project_structure.txt
+./.vscode/
+.vscode/            
+./merge_source_dumper.py
+./merge_source_dump.txt

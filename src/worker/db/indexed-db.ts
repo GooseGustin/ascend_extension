@@ -15,7 +15,19 @@ import type { AgentState } from "../models/AgentState";
 import type { GoalComment } from "../models/GoalComment";
 import type { Notification } from "../models/Notification";
 import type { SyncOperation } from "../models/SyncOperation";
+<<<<<<< HEAD
 import { UserSettings } from "../models";
+=======
+import type { PerformanceMetrics } from "../models/AgentState";
+
+export interface PerformanceMetricsSnapshot {
+  id: string; // Unique ID: userId-metricType-timestamp
+  userId: string;
+  metricType: 'weeklyVelocity' | 'monthlyConsistency';
+  timestamp: string; // ISO8601 when the metric was calculated
+  value: number;
+}
+>>>>>>> grandmaster
 
 export class IndexedDb extends Dexie {
   // Tables
@@ -28,11 +40,19 @@ export class IndexedDb extends Dexie {
   comments!: Table<GoalComment, string>;
   notifications!: Table<Notification, string>;
   syncQueue!: Table<SyncOperation, string>;
+<<<<<<< HEAD
   settings!: Table<UserSettings, string>;
 
   constructor() {
     super("AscendDB");
     this.version(5).stores({
+=======
+  performanceSnapshots!: Table<PerformanceMetricsSnapshot, string>;
+
+  constructor() {
+    super("AscendDB");
+    this.version(6).stores({
+>>>>>>> grandmaster
       // BUMP VERSION
       users: "userId, username, totalLevel",
       quests:
@@ -44,9 +64,15 @@ export class IndexedDb extends Dexie {
       agentStates: "userId, lastObservationTimestamp",
       comments: "id, questId, userId, timestamp",
       notifications:
+<<<<<<< HEAD
         "id, userId, isRead, createdAt, [userId+isRead]",
       syncQueue: "id, timestamp, priority, [priority+timestamp]",
       settings: "userId, lastModified",
+=======
+        "notificationId, userId, isRead, createdAt, [userId+isRead]",
+      syncQueue: "id, userId, timestamp, priority, [priority+timestamp]",
+      performanceSnapshots: "id, userId, metricType, timestamp, [userId+metricType+timestamp]",    
+>>>>>>> grandmaster
     });
 
     // Migration/upgrade block: convert older taskOrder shapes if needed
@@ -239,6 +265,67 @@ export class IndexedDb extends Dexie {
       this.syncQueue.clear(),
     ]);
   }
+
+  /**
+   * Get a historical metric value from a specific lookback period (e.g., 1 period ago).
+   * Used for calculating trends (e.g., Current Velocity vs. Last Week's Velocity).
+   */
+  async getHistoricalMetric(
+    userId: string, 
+    metricType: PerformanceMetricsSnapshot['metricType'], 
+    periodsAgo: number
+  ): Promise<number | undefined> {
+    const now = Date.now();
+    let lookbackMs = 0;
+    
+    // Determine the rough period duration based on metric type
+    if (metricType === 'weeklyVelocity') {
+      lookbackMs = 7 * 24 * 60 * 60 * 1000; // 7 days
+    } else if (metricType === 'monthlyConsistency') {
+      lookbackMs = 30 * 24 * 60 * 60 * 1000; // 30 days
+    } else {
+      return undefined;
+    }
+    
+    // Calculate the target window for the historical metric (e.g., 7-14 days ago for weekly velocity)
+    const targetEnd = new Date(now - lookbackMs * periodsAgo).toISOString();
+    const targetStart = new Date(now - lookbackMs * (periodsAgo + 1)).toISOString();
+
+    // Query using the compound index: [userId+metricType+timestamp]
+    const historicalSnapshot = await this.performanceSnapshots
+      .where('[userId+metricType+timestamp]')
+      .between([userId, metricType, targetStart], [userId, metricType, targetEnd], true, false)
+      .reverse() // Get most recent snapshot in that window
+      .first();
+
+    return historicalSnapshot?.value;
+  }
+  
+  // ADD NEW METHOD: saveHistoricalMetric
+  /**
+   * Saves a performance metric snapshot for later comparison.
+   * Called by the Analytics Service after generating the new AgentState.
+   */
+  async savePerformanceSnapshot(
+    userId: string, 
+    metricType: PerformanceMetricsSnapshot['metricType'], 
+    value: number
+  ): Promise<void> {
+    const timestamp = new Date().toISOString();
+    // Use ISO string as part of ID for implicit time-sorting on unique ID field
+    const id = `${userId}-${metricType}-${timestamp}`; 
+    
+    await this.performanceSnapshots.put({
+      id,
+      userId,
+      metricType,
+      timestamp,
+      value,
+    } as PerformanceMetricsSnapshot);
+  }
+
+
+
 }
 
 let _db: IndexedDb | null = null;

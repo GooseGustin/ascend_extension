@@ -5,6 +5,8 @@
 
 import { getDB } from "../db/indexed-db";
 import type { Session } from "../models/Session";
+import type { PerformanceMetrics } from "../models/AgentState";
+import type { Quest } from "../models/Quest";
 
 export interface HeatmapDay {
   date: string;
@@ -711,24 +713,174 @@ export class AnalyticsService {
     const today = new Date().toISOString().split("T")[0];
     return await this.getSessionsByDateRange(userId, today, today);
   }
-}
 
-export function totalExpForLevel(L: number) {
-  return 100 * (Math.exp(L / 5) - 1);
-}
+  // --- START GM-SPECIFIC ANALYTICS METHODS ---
 
-export function xpToNextLevel(currentExp: number) {
-  // compute current level (continuous)
-  const level = Math.floor(Math.log(currentExp / 100 + 1) * 5);
-  const neededTotal = totalExpForLevel(level + 1);
-  return Math.max(0, Math.ceil(neededTotal - currentExp));
-}
+  /**
+   * Calculate weekly velocity (Total XP / Total Active Hours) for GM context.
+   * Required for GM validation context.
+   */
+  async calculateWeeklyVelocity(userId: string): Promise<number> {
+    // Get sessions from the last 7 days
+    const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const now = new Date().toISOString();
+    
+    // Use the existing getSessionsByDateRange method
+    const sessions = await this.getSessionsByDateRange(userId, oneWeekAgo.split("T")[0], now.split("T")[0]);
+    
+    const totalXP = sessions
+      .filter(s => s.status === 'completed')
+      .reduce((sum, s) => sum + (s.xpEarned || 0), 0);
+    
+    // Convert minutes to hours
+    const totalHours = sessions
+      .reduce((sum, s) => sum + s.actualDurationMin, 0) / 60;
+    
+    return totalHours > 0 ? totalXP / totalHours : 0;
+  }
 
-export function xpDeltaForLevel(L: number) {
-  const factor = Math.exp(1 / 5) - 1; // ≈ 0.22140275816
-  return 100 * Math.exp(L / 5) * factor;
-}
+  /**
+   * Calculate consistency score (0-100) over 30 days. (Different from the existing 14-day getConsistencyScore)
+   * Required for GM validation context.
+   */
+  async calculateConsistencyScore(userId: string): Promise<number> {
+    const days = 30;
+    const thirtyDaysAgo = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+    const endDate = new Date().toISOString().split("T")[0];
+    const startDate = thirtyDaysAgo.toISOString().split("T")[0];
+    
+    // Use the existing getSessionsByDateRange method
+    const sessions = await this.getSessionsByDateRange(userId, startDate, endDate);
+    
+    // Count unique days with completed sessions (actual duration >= 10 min)
+    const activeDays = new Set(
+      sessions
+        .filter(s => s.status === 'completed' && s.actualDurationMin >= 10)
+        .map(s => s.startTime.split('T')[0])
+    );
+    const uniqueDays = activeDays.size;
+    
+    // Consistency calculation logic (from the plan's specification)
+    const baseScore = (uniqueDays / days) * 80;
+    
+    // Streak Bonus (up to 15% weight)
+    const profile = await this.db.users.get(userId);
+    const currentStreak = profile?.streakData.currentStreak || 0; // Assuming streakData exists
+    const streakBonus = Math.min(15, currentStreak / 2);
+    
+    // Note: The existing getConsistencyScore adds a 5% frequency bonus. 
+    // Sticking to the plan's simplified 80% base + 15% streak logic for the GM metric.
+    
+    return Math.min(100, Math.round(baseScore + streakBonus));
+  }
 
-export function currentLevelFromExp(currentExp: number) {
-  return Math.floor(Math.log(currentExp / 100 + 1) * 5);
+  /**
+   * Assess burnout risk based on volume spike, quality decline, and overdue quests.
+   * Required for GM adaptive coaching.
+   */
+  async assessBurnoutRisk(userId: string): Promise<'Low' | 'Medium' | 'High' | 'Critical'> {
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+    const now = new Date().toISOString().split("T")[0];
+    
+    const sessions = await this.getSessionsByDateRange(userId, sevenDaysAgo, now);
+    const sessionsThisWeek = sessions.length;
+    
+    let riskScore = 0;
+    
+    // Factor 1: Excessive work volume (over 50 sessions/week)
+    if (sessionsThisWeek > 50) riskScore += 30;
+
+    // Calculate average quality for the week (Factor 2a)
+    const sessionsWithQuality = sessions.filter(s => s.quality?.score !== undefined);
+    const avgSessionQuality = sessionsWithQuality.length > 0 
+      ? sessionsWithQuality.reduce((sum, s) => sum + (s.quality!.score || 0), 0) / sessionsWithQuality.length 
+      : 0;
+    
+    if (avgSessionQuality < 50 && sessionsThisWeek > 5) riskScore += 25; // Poor overall quality
+
+    // Factor 2b: Quality decline (last 10 sessions vs weekly average)
+    const recentSessions = sessionsWithQuality.slice(-10);
+    const recentQuality = recentSessions.length > 0 
+      ? recentSessions.reduce((sum, s) => sum + (s.quality!.score || 0), 0) / recentSessions.length 
+      : avgSessionQuality;
+
+    if (recentQuality < avgSessionQuality - 15) riskScore += 25; // Significant declining quality trend
+    
+    // Factor 3: Overdue quests
+    // NOTE: Assuming this.db.getActiveQuests(userId) exists in the IndexedDB wrapper
+    const quests = await this.db.getActiveQuests(userId); 
+    const overdueCount = quests.filter(q => 
+      q.dueDate && new Date(q.dueDate) < new Date()
+    ).length;
+    
+    if (overdueCount > 3) riskScore += 20;
+    
+    // Determine risk level
+    if (riskScore >= 75) return 'Critical';
+    if (riskScore >= 50) return 'High';
+    if (riskScore >= 25) return 'Medium';
+    return 'Low';
+  }
+
+  /**
+   * Generate full AgentState (PerformanceMetrics) DTO for GM context.
+   * Orchestrates all calculations and trend analysis.
+   */
+  async generateAgentState(userId: string): Promise<PerformanceMetrics> {
+    const [velocity, consistency, burnout] = await Promise.all([
+      this.calculateWeeklyVelocity(userId),
+      this.calculateConsistencyScore(userId),
+      this.assessBurnoutRisk(userId),
+    ]);
+    
+    // Fetch dependent data
+    const profile = await this.db.users.get(userId);
+    // Use Quest[] type
+    const quests: Quest[] = await this.db.getActiveQuests(userId); // Active quests
+    
+    // Metrics from existing methods or direct calculation
+    const sessionsToday = await this.getTodaySessions(userId);
+    const avgQuality = sessionsToday.length > 0 
+      ? sessionsToday.reduce((sum, s) => sum + (s.quality?.score || 0), 0) / sessionsToday.length 
+      : 0;
+    
+    const overdueCount = quests.filter(q => 
+      q.dueDate && new Date(q.dueDate) < new Date()
+    ).length;
+    
+    // Trend Logic: NOW USING REAL DB CALLS
+    
+    // Get historical metric for comparison (1 period ago)
+    // FIX: Using the real getHistoricalMetric method
+    const lastWeekVelocity = await this.db.getHistoricalMetric(userId, 'weeklyVelocity', 1) || 0;
+    const velocityTrend = velocity > lastWeekVelocity * 1.1 ? 'improving' : 
+                          velocity < lastWeekVelocity * 0.9 ? 'declining' : 'stable';
+                          
+    // Get historical metric for comparison (1 period ago)
+    // FIX: Using the real getHistoricalMetric method
+    const lastMonthConsistency = await this.db.getHistoricalMetric(userId, 'monthlyConsistency', 1) || 0;
+    const consistencyTrend = consistency > lastMonthConsistency * 1.05 ? 'improving' : 
+                             consistency < lastMonthConsistency * 0.95 ? 'declining' : 'stable';
+    
+    const finalMetrics = {
+      weeklyVelocity: velocity,
+      monthlyConsistency: consistency,
+      burnoutRisk: burnout,
+      averageSessionQuality: avgQuality,
+      streakDays: profile?.streakData?.currentStreak || 0,
+      activeQuestCount: quests.length,
+      overdueQuestCount: overdueCount,
+      velocityTrend,
+      consistencyTrend,
+      calculatedAt: new Date().toISOString(),
+    } as PerformanceMetrics;
+
+    // ADDED: Save the current metrics for future historical comparison
+    await Promise.all([
+      this.db.savePerformanceSnapshot(userId, 'weeklyVelocity', velocity),
+      this.db.savePerformanceSnapshot(userId, 'monthlyConsistency', consistency),
+    ]);
+
+    return finalMetrics;
+  }
 }

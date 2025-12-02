@@ -259,7 +259,8 @@ export class SeedService {
         
         registeredAt: new Date(Date.now() - 10 * 86400000).toISOString(),
         createdAt: new Date(Date.now() - 10 * 86400000).toISOString(),
-        updatedAt: new Date(Date.now() - 86400000).toISOString()
+        updatedAt: new Date(Date.now() - 86400000).toISOString(),
+        validationStatus: 'validated'
       },
 
       // Quest 2: Weekly project quest
@@ -362,7 +363,8 @@ export class SeedService {
         
         registeredAt: new Date(Date.now() - 5 * 86400000).toISOString(),
         createdAt: new Date(Date.now() - 5 * 86400000).toISOString(),
-        updatedAt: new Date(Date.now() - 3 * 86400000).toISOString()
+        updatedAt: new Date(Date.now() - 3 * 86400000).toISOString(), 
+        validationStatus: 'pending'
       },
 
       // Quest 3: Todo Quest
@@ -448,7 +450,8 @@ export class SeedService {
         
         registeredAt: new Date(Date.now() - 20 * 86400000).toISOString(),
         createdAt: new Date(Date.now() - 20 * 86400000).toISOString(),
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(), 
+        validationStatus: 'validated'
       },
 
       // Quest 4: Overdue quest for testing
@@ -526,7 +529,8 @@ export class SeedService {
         
         registeredAt: new Date(Date.now() - 15 * 86400000).toISOString(),
         createdAt: new Date(Date.now() - 15 * 86400000).toISOString(),
-        updatedAt: new Date(Date.now() - 15 * 86400000).toISOString()
+        updatedAt: new Date(Date.now() - 15 * 86400000).toISOString(), 
+        validationStatus: 'queued'
       }
     ];
 
