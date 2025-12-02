@@ -15,9 +15,7 @@ import type { AgentState } from "../models/AgentState";
 import type { GoalComment } from "../models/GoalComment";
 import type { Notification } from "../models/Notification";
 import type { SyncOperation } from "../models/SyncOperation";
-<<<<<<< HEAD
 import { UserSettings } from "../models";
-=======
 import type { PerformanceMetrics } from "../models/AgentState";
 
 export interface PerformanceMetricsSnapshot {
@@ -27,7 +25,6 @@ export interface PerformanceMetricsSnapshot {
   timestamp: string; // ISO8601 when the metric was calculated
   value: number;
 }
->>>>>>> grandmaster
 
 export class IndexedDb extends Dexie {
   // Tables
@@ -40,19 +37,12 @@ export class IndexedDb extends Dexie {
   comments!: Table<GoalComment, string>;
   notifications!: Table<Notification, string>;
   syncQueue!: Table<SyncOperation, string>;
-<<<<<<< HEAD
   settings!: Table<UserSettings, string>;
-
-  constructor() {
-    super("AscendDB");
-    this.version(5).stores({
-=======
   performanceSnapshots!: Table<PerformanceMetricsSnapshot, string>;
 
   constructor() {
     super("AscendDB");
     this.version(6).stores({
->>>>>>> grandmaster
       // BUMP VERSION
       users: "userId, username, totalLevel",
       quests:
@@ -63,16 +53,10 @@ export class IndexedDb extends Dexie {
       activityFeed: "activityId, userId, type, timestamp, [userId+timestamp]",
       agentStates: "userId, lastObservationTimestamp",
       comments: "id, questId, userId, timestamp",
-      notifications:
-<<<<<<< HEAD
-        "id, userId, isRead, createdAt, [userId+isRead]",
-      syncQueue: "id, timestamp, priority, [priority+timestamp]",
+      notifications: "id, userId, isRead, createdAt, [userId+isRead]",
       settings: "userId, lastModified",
-=======
-        "notificationId, userId, isRead, createdAt, [userId+isRead]",
       syncQueue: "id, userId, timestamp, priority, [priority+timestamp]",
       performanceSnapshots: "id, userId, metricType, timestamp, [userId+metricType+timestamp]",    
->>>>>>> grandmaster
     });
 
     // Migration/upgrade block: convert older taskOrder shapes if needed
