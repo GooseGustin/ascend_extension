@@ -18,16 +18,18 @@ export class SessionService {
     userId: string,
     questId: string,
     subtaskId: string | null,
-    plannedDurationMin: number
+    plannedDurationMin: number,
+    sessionType: 'pomodoro' | 'deep_focus' = 'pomodoro'
   ): Promise<Session> {
     const session: Session = {
       sessionId: crypto.randomUUID(),
+      sessionType,
       userId,
       questId,
       subtaskId,
       startTime: new Date().toISOString(),
       endTime: null,
-      plannedDurationMin,
+      // plannedDurationMin,
       actualDurationMin: 0,
       status: 'active',
       pauseEvents: [],
@@ -43,6 +45,7 @@ export class SessionService {
       },
       xpEarned: 0,
       xpMultipliers: [],
+      deepFocusElapsedSec: 0,
       notes: null,
       tags: []
     };
@@ -59,6 +62,138 @@ export class SessionService {
     });
 
     return session;
+  }
+
+  /**
+   * Create break session (auto-triggered after pomodoro)
+   */
+  // async createBreakSession(
+  //   userId: string,
+  //   questId: string,
+  //   breakDurationMin: number
+  // ): Promise<Session> {
+  //   const breakSession: Session = {
+  //     sessionId: crypto.randomUUID(),
+  //     userId,
+  //     questId,
+  //     subtaskId: null,
+  //     sessionType: 'break', // NEW
+  //     startTime: new Date().toISOString(),
+  //     endTime: null,
+  //     plannedDurationMin: breakDurationMin,
+  //     actualDurationMin: 0,
+  //     status: 'active',
+  //     pauseEvents: [],
+  //     interruptions: [],
+  //     quality: {
+  //       score: 100, // Breaks always get 100 quality
+  //       factors: {
+  //         completionRate: 100,
+  //         interruptionPenalty: 0,
+  //         overtimeBonus: 0,
+  //         consistencyBonus: 0,
+  //       },
+  //     },
+  //     xpEarned: 0, // Breaks don't earn XP
+  //     xpMultipliers: [],
+  //     deepFocusElapsedSec: 0,
+  //     notes: null,
+  //     tags: ['break'],
+  //   };
+
+  //   await this.db.sessions.add(breakSession);
+  //   await this.db.queueSync({
+  //     operation: 'create',
+  //     collection: 'sessions',
+  //     documentId: breakSession.sessionId,
+  //     data: breakSession,
+  //     priority: 8,
+  //   });
+
+  //   return breakSession;
+  // }
+
+  /**
+   * Switch session to deep focus mode
+   */
+  async switchToDeepFocus(sessionId: string): Promise<Session> {
+    const session = await this.db.sessions.get(sessionId);
+    if (!session) throw new Error('Session not found');
+
+    const elapsed = this.getSessionElapsedSeconds(session);
+
+    // If less than 2 minutes, discard and create new deep focus session
+    if (elapsed < 120) {
+      await this.db.sessions.delete(sessionId);
+      
+      const deepFocusSession: Session = {
+        sessionId: crypto.randomUUID(),
+        userId: session.userId,
+        questId: session.questId,
+        subtaskId: session.subtaskId,
+        sessionType: 'deep_focus',
+        startTime: new Date().toISOString(),
+        endTime: null,
+        plannedDurationMin: 120, // 2 hour cap
+        actualDurationMin: 0,
+        status: 'active',
+        pauseEvents: [],
+        interruptions: [],
+        quality: {
+          score: 0,
+          factors: {
+            completionRate: 0,
+            interruptionPenalty: 0,
+            overtimeBonus: 0,
+            consistencyBonus: 0,
+          },
+        },
+        xpEarned: 0,
+        xpMultipliers: [],
+        deepFocusElapsedSec: 0,
+        notes: null,
+        tags: ['deep_focus'],
+      };
+
+      await this.db.sessions.add(deepFocusSession);
+      await this.db.queueSync({
+        operation: 'create',
+        collection: 'sessions',
+        documentId: deepFocusSession.sessionId,
+        data: deepFocusSession,
+        priority: 9,
+      });
+
+      return deepFocusSession;
+    }
+
+    // Otherwise, convert existing session
+    session.sessionType = 'deep_focus';
+    session.deepFocusElapsedSec = elapsed;
+    session.plannedDurationMin = 120; // 2 hour cap from now
+    session.startTime = new Date().toISOString(); // Reset start time for deep focus
+    session.tags.push('deep_focus');
+
+    await this.db.sessions.update(sessionId, session);
+    await this.db.queueSync({
+      operation: 'update',
+      collection: 'sessions',
+      documentId: sessionId,
+      data: session,
+      priority: 9,
+    });
+
+    return session;
+  }
+
+  /**
+   * Helper: Get elapsed seconds for a session
+   */
+  private getSessionElapsedSeconds(session: Session): number {
+    const start = new Date(session.startTime).getTime();
+    const now = Date.now();
+    const pauseTime = session.pauseEvents.reduce((sum, p) => sum + p.durationSec, 0);
+    return Math.floor((now - start) / 1000) - pauseTime;
   }
 
   /**
@@ -155,6 +290,8 @@ export class SessionService {
     xpAwarded: number;
     qualityScore: number;
     levelUp: boolean | { newLevel: number; questId: string };
+    shouldStartBreak?: boolean; // NEW
+    breakDurationMin?: number; // NEW
   }> {
     const session = await this.db.sessions.get(sessionId);
     if (!session) throw new Error('Session not found');
@@ -165,6 +302,10 @@ export class SessionService {
     const quest = await this.db.quests.get(session.questId);
     if (!quest) throw new Error('Quest not found');
 
+    // Get user settings
+    const settingsService = await import('./settings.service').then(m => m.getSettingsService());
+    const settings = await settingsService.getUserSettings(session.userId);
+
     // Calculate quality score
     const qualityScore = this.calculateQuality(
       session,
@@ -172,18 +313,33 @@ export class SessionService {
       userProfile.streakData.currentStreak
     );
 
-    // Calculate XP with quality multiplier
-    const baseXP = quest.difficulty.xpPerPomodoro;
-    const qualityMultiplier = qualityScore >= 50 ? 1.0 : 0.5;
-    let xpEarned = Math.floor(baseXP * qualityMultiplier);
+    // Calculate XP based on session type
+    let xpEarned = 0;
+    
+    if (session.sessionType === 'pomodoro') {
+      const baseXP = quest.difficulty.xpPerPomodoro;
+      const qualityMultiplier = qualityScore >= 50 ? 1.0 : 0.5;
+      xpEarned = Math.floor(baseXP * qualityMultiplier);
 
-    // Apply additional multipliers
-    if (quest.isTrackAligned) {
-      xpEarned = Math.floor(xpEarned * 1.1);
+      // Apply additional multipliers
+      if (quest.isTrackAligned) {
+        xpEarned = Math.floor(xpEarned * 1.1);
+      }
+      if (quest.isDungeon) {
+        xpEarned = Math.floor(xpEarned * 1.5);
+      }
+    } else if (session.sessionType === 'deep_focus') {
+      // Deep focus XP calculation
+      const pomodoroXPRate = quest.difficulty.xpPerPomodoro / 25; // XP per minute
+      const deepFocusXPRate = pomodoroXPRate * settings.productivity.deepFocus.xpRateMultiplier;
+      xpEarned = Math.floor(actualDurationMin * deepFocusXPRate);
+
+      // Apply dungeon multiplier only (no track alignment for deep focus)
+      if (quest.isDungeon) {
+        xpEarned = Math.floor(xpEarned * 1.5);
+      }
     }
-    if (quest.isDungeon) {
-      xpEarned = Math.floor(xpEarned * 1.5);
-    }
+    // Break sessions don't earn XP
 
     // Update session
     session.status = 'completed';
@@ -197,8 +353,8 @@ export class SessionService {
         completionRate: (actualDurationMin / session.plannedDurationMin) * 100,
         interruptionPenalty: this.calculateInterruptionPenalty(session),
         overtimeBonus: this.calculateOvertimeBonus(session, actualDurationMin),
-        consistencyBonus: Math.min(10, (userProfile.streakData.currentStreak / 30) * 10)
-      }
+        consistencyBonus: Math.min(10, (userProfile.streakData.currentStreak / 30) * 10),
+      },
     };
 
     await this.db.sessions.update(sessionId, session);
@@ -207,7 +363,7 @@ export class SessionService {
     quest.gamification.currentExp += xpEarned;
     quest.tracking.totalTrackedTime += actualDurationMin;
     quest.tracking.lastSessionAt = session.endTime;
-    
+
     // Check for level up
     const levelUp = await this.checkQuestLevelUp(quest);
 
@@ -217,13 +373,13 @@ export class SessionService {
     userProfile.experiencePoints += xpEarned;
     await this.db.users.update(userProfile.userId, userProfile);
 
-    // Queue for sync (priority 10 - completed session)
+    // Queue for sync
     await this.db.queueSync({
       operation: 'update',
       collection: 'sessions',
       documentId: sessionId,
       data: session,
-      priority: 10
+      priority: 10,
     });
 
     await this.db.queueSync({
@@ -231,14 +387,21 @@ export class SessionService {
       collection: 'quests',
       documentId: quest.questId,
       data: quest,
-      priority: 9
+      priority: 9,
     });
+
+    // Determine if break should auto-start
+    const shouldStartBreak =
+      session.sessionType === 'pomodoro' &&
+      settings.productivity.pomodoro.autoStartBreak;
 
     return {
       session,
       xpAwarded: xpEarned,
       qualityScore,
-      levelUp
+      levelUp,
+      shouldStartBreak,
+      breakDurationMin: settings.productivity.pomodoro.breakDuration,
     };
   }
 
@@ -326,26 +489,26 @@ export class SessionService {
   /**
    * Abandon session (stopped early)
    */
-  async abandonSession(sessionId: string): Promise<Session> {
-    const session = await this.db.sessions.get(sessionId);
-    if (!session) throw new Error('Session not found');
+  // async abandonSession(sessionId: string): Promise<Session> {
+  //   const session = await this.db.sessions.get(sessionId);
+  //   if (!session) throw new Error('Session not found');
 
-    session.status = 'abandoned';
-    session.endTime = new Date().toISOString();
-    session.xpEarned = 0; // No XP for abandoned sessions
+  //   session.status = 'abandoned';
+  //   session.endTime = new Date().toISOString();
+  //   session.xpEarned = 0; // No XP for abandoned sessions
 
-    await this.db.sessions.update(sessionId, session);
+  //   await this.db.sessions.update(sessionId, session);
     
-    await this.db.queueSync({
-      operation: 'update',
-      collection: 'sessions',
-      documentId: sessionId,
-      data: session,
-      priority: 7
-    });
+  //   await this.db.queueSync({
+  //     operation: 'update',
+  //     collection: 'sessions',
+  //     documentId: sessionId,
+  //     data: session,
+  //     priority: 7
+  //   });
 
-    return session;
-  }
+  //   return session;
+  // }
 
   /**
    * Get active session for user

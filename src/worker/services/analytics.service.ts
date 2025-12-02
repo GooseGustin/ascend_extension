@@ -263,6 +263,7 @@ export class AnalyticsService {
       [questTitle: string]: number | string;
     }>
   > {
+    console.log('[getworkDistribution], period', period);
     const now = new Date();
     let days: number;
     let groupBy: "day" | "week";
@@ -332,13 +333,15 @@ export class AnalyticsService {
     });
 
     // Convert to chart format
-    return Array.from(grouped.entries()).map(([name, questTimes]) => {
+    const chardFormat = Array.from(grouped.entries()).map(([name, questTimes]) => {
       const entry: any = { name };
       questTimes.forEach((time, quest) => {
         entry[quest] = time;
       });
       return entry;
     });
+    console.log('[getworkDistribution], chartFormat', chardFormat);
+    return chardFormat;
   }
 
   /**

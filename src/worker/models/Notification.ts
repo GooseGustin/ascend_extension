@@ -4,7 +4,7 @@
  */
 
 export interface Notification {
-  notificationId: string;
+  id: string;
   userId: string;
   type: 'milestone' | 'comment' | 'slowdown' | 'guild' | 'achievement' | 'quest_default';
   

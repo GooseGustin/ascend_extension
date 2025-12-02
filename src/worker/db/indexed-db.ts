@@ -15,6 +15,7 @@ import type { AgentState } from "../models/AgentState";
 import type { GoalComment } from "../models/GoalComment";
 import type { Notification } from "../models/Notification";
 import type { SyncOperation } from "../models/SyncOperation";
+import { UserSettings } from "../models";
 
 export class IndexedDb extends Dexie {
   // Tables
@@ -27,23 +28,25 @@ export class IndexedDb extends Dexie {
   comments!: Table<GoalComment, string>;
   notifications!: Table<Notification, string>;
   syncQueue!: Table<SyncOperation, string>;
+  settings!: Table<UserSettings, string>;
 
   constructor() {
     super("AscendDB");
-    this.version(4).stores({
+    this.version(5).stores({
       // BUMP VERSION
       users: "userId, username, totalLevel",
       quests:
-        "questId, ownerId, type, isPublic, isCompleted, [ownerId+isCompleted]",
+        "questId, ownerId, type, isPublic, isCompleted, registeredAt, [ownerId+isCompleted]",
       sessions:
-        "sessionId, userId, questId, startTime, status, [userId+startTime]",
+        "sessionId, userId, questId, startTime, status, sessionType, [userId+startTime]",
       taskOrders: "&id, userId, date, questId, [userId+date], [userId+date+questId]",
       activityFeed: "activityId, userId, type, timestamp, [userId+timestamp]",
       agentStates: "userId, lastObservationTimestamp",
-      comments: "commentId, questId, userId, timestamp",
+      comments: "id, questId, userId, timestamp",
       notifications:
-        "notificationId, userId, isRead, createdAt, [userId+isRead]",
+        "id, userId, isRead, createdAt, [userId+isRead]",
       syncQueue: "id, timestamp, priority, [priority+timestamp]",
+      settings: "userId, lastModified",
     });
 
     // Migration/upgrade block: convert older taskOrder shapes if needed

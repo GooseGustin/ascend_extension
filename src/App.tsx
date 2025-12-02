@@ -17,6 +17,7 @@ import {
   SessionService,
   getTaskService,
   QuestUIAdapter,
+  getSettingsService,
 } from "./worker";
 import type {
   Quest,
@@ -35,6 +36,7 @@ import {
 } from "./worker/utils/task-order-storage";
 import questToTasks from "./worker/utils/quest-to-tasks";
 import { migrateTaskOrderStorage } from "./worker/utils/migrate-task-orders";
+import { initializeTheme, applyAccentColor, applyTheme } from "./worker/utils/theme";
 
 // Keep existing UI interfaces for Figma compatibility
 export interface Task {
@@ -65,7 +67,11 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [progressView, setProgressView] = useState("overview");
-  const [selectedSettingsSection, setSelectedSettingsSection] = useState("account");
+  const [selectedSettingsSection, setSelectedSettingsSection] = useState<
+    'account' | 'notifications' | 'appearance' | 
+    'productivity' | 'ai' | 'data' | 'extension' | 
+    'about' | 'danger'
+    >('account');
 
   // Worker data
   const [workerQuests, setWorkerQuests] = useState<WorkerQuest[]>([]);
@@ -91,6 +97,26 @@ export default function App() {
   // Initialize on mount
   useEffect(() => {
     initializeApp();
+  }, []);
+
+  useEffect(() => {
+    initializeTheme();
+    
+    const loadAndApplySettings  = async () => {
+      try {
+        const settingsService = getSettingsService();
+        const userId = await authService.getCurrentUserId();
+        const userSettings = await settingsService.getUserSettings(userId);
+        
+        // Apply theme immediately
+        applyTheme(userSettings.appearance.theme);
+        applyAccentColor(userSettings.appearance.accentColor);
+      } catch (error) {
+        console.error('Failed to load settings:', error);
+      }
+    };
+    
+    loadAndApplySettings ();
   }, []);
 
   // Load quest-specific data when quest is selected

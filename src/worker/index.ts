@@ -16,6 +16,7 @@ export { AuthService } from './services/auth.service'; // NEW
 export { QuestUIAdapter } from './services/quest-ui-adapter.service';
 export { QuestService } from './services/quest.service';
 export { NotificationService } from './services/notification.service';
+export { SettingsService, getSettingsService } from './services/settings.service';
 
 // Export utilities
 export { calculateTaskPriority, sortQuestsByPriority } from './utils/task-sorting.util';

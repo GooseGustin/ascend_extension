@@ -9,15 +9,16 @@ export interface Session {
   questId: string;
   subtaskId: string | null;
   
+  sessionType: 'pomodoro' | 'deep_focus'; 
+  
   startTime: string; // ISO8601
   endTime: string | null; // ISO8601
-  plannedDurationMin: number;
+  plannedDurationMin: number; // For pomodoro, null for deep_focus
   actualDurationMin: number;
   
   status: 'active' | 'paused' | 'completed' | 'abandoned';
   
-  pauseEvents: PauseEvent[]; // NEW in v0.1
-  
+  pauseEvents: PauseEvent[];
   interruptions: Interruption[];
   
   quality: {
@@ -32,6 +33,9 @@ export interface Session {
   
   xpEarned: number;
   xpMultipliers: XPMultiplier[];
+  
+  // Deep Focus specific
+  deepFocusElapsedSec: number; // NEW - tracks up-counter for deep focus
   
   notes: string | null;
   tags: string[];

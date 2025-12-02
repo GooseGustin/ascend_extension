@@ -554,7 +554,7 @@ export class SeedService {
       // 4 days ago - 2 sessions
       { daysAgo: 4, count: 2, questId: quests[1].questId, xp: 300 },
       // 3 days ago - 1 session
-      { daysAgo: 3, count: 1, questId: quests[2].questId, xp: 50 },
+      { daysAgo: 3, count: 1, questId: quests[3].questId, xp: 50 },
       // 2 days ago - 4 sessions (high activity)
       { daysAgo: 2, count: 4, questId: quests[0].questId, xp: 200 },
       // 1 day ago - 2 sessions

@@ -86,6 +86,45 @@ export function StatsStrip({ userId }: StatsStripProps) {
     if (userId) load();
   }, [userId]);
 
+  // return (
+  //   <div className="grid grid-cols-4 gap-4">
+  //     {stats.map((stat, index) => (
+  //       <div
+  //         key={index}
+  //         className="bg-[#2f3136] rounded-lg p-4 relative overflow-hidden"
+  //       >
+  //         {/* Subtle gradient accent */}
+  //         <div
+  //           className="absolute inset-0 opacity-5"
+  //           style={{
+  //             background: `linear-gradient(135deg, ${
+  //               stat.isPositive ? "#57F287" : "#ED4245"
+  //             } 0%, transparent 100%)`,
+  //           }}
+  //         />
+
+  //         <div className="relative">
+  //           <div className="text-xs text-[#b9bbbe] mb-1">{stat.title}</div>
+  //           <div className="text-3xl text-white mb-2">{stat.value}</div>
+  //           <div
+  //             className={`flex items-center gap-1 text-xs ${
+  //               stat.isPositive ? "text-[#57F287]" : "text-[#ED4245]"
+  //             }`}
+  //           >
+  //             {stat.isPositive ? (
+  //               <TrendingUp className="w-3 h-3" />
+  //             ) : (
+  //               <TrendingDown className="w-3 h-3" />
+  //             )}
+  //             <span>{stat.changePercent} vs last month</span>
+  //           </div>
+  //         </div>
+  //       </div>
+  //     ))}
+  //   </div>
+  // );
+
+
   return (
     <div className="grid grid-cols-4 gap-4">
       {stats.map((stat, index) => (
@@ -97,20 +136,14 @@ export function StatsStrip({ userId }: StatsStripProps) {
           <div
             className="absolute inset-0 opacity-5"
             style={{
-              background: `linear-gradient(135deg, ${
-                stat.isPositive ? "#57F287" : "#ED4245"
-              } 0%, transparent 100%)`,
+              background: `linear-gradient(135deg, ${stat.isPositive ? '#57F287' : '#ED4245'} 0%, transparent 100%)`,
             }}
           />
 
           <div className="relative">
             <div className="text-xs text-[#b9bbbe] mb-1">{stat.title}</div>
             <div className="text-3xl text-white mb-2">{stat.value}</div>
-            <div
-              className={`flex items-center gap-1 text-xs ${
-                stat.isPositive ? "text-[#57F287]" : "text-[#ED4245]"
-              }`}
-            >
+            <div className={`flex items-center gap-1 text-xs ${stat.isPositive ? 'text-[#57F287]' : 'text-[#ED4245]'}`}>
               {stat.isPositive ? (
                 <TrendingUp className="w-3 h-3" />
               ) : (

@@ -1,0 +1,10 @@
+./AboutSection.tsx
+./AccountSection.tsx
+./AISection.tsx
+./AppearanceSection.tsx
+./DangerSection.tsx
+./DataSection.tsx
+./ExtensionSection.tsx
+./NotificationsSection.tsx
+./ProductivitySection.tsx
+./project_structure.txt

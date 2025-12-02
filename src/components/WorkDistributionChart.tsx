@@ -25,8 +25,7 @@ export function WorkDistributionChart({
     []
   );
 
-  useEffect(
-    (userId: string) => {
+  useEffect(() => {
       const period =
         timeView === "by-month"
           ? "monthly"
@@ -56,6 +55,9 @@ export function WorkDistributionChart({
     },
     [userId]
   );
+
+  console.log('[WorkDistributionChart], weeklydata', data); 
+  console.log('[WorkDistributionChart], quests', quests);
 
   const getTitle = () => {
     if (timeView === "by-month") return "Monthly Distribution";

@@ -4,7 +4,7 @@
  */
 
 export interface GoalComment {
-  commentId: string;
+  id: string;
   questId: string;
   userId: string;
   username: string;

@@ -15,3 +15,5 @@ export type { SyncOperation } from './SyncOperation';
 export type { GMSuggestion } from './GMSuggestion';
 export type { DungeonMemberProgress } from './DungeonMemberProgress';
 export type { AnalyticsSummary, DayBreakdown, QuestBreakdown } from './AnalyticsSummary';
+export type { UserSettings } from './UserSettings';
+export { DEFAULT_USER_SETTINGS } from './UserSettings';
