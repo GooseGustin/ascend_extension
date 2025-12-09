@@ -25,7 +25,7 @@ interface QuestsMainPanelProps {
   onCreateQuest: () => void;
   onCancelCreate: () => void;
   onAddSubtask: (questId: string, title: string) => void;
-  onFloatingPlusClick: () => void;
+  // onFloatingPlusClick: () => void;
   onDeleteQuest?: (questId: string) => void;
   onArchiveQuest?: (questId: string) => void;
   onUpdateQuest?: (questId: string, updates: Partial<Quest>) => void;
@@ -47,7 +47,6 @@ export function QuestsMainPanel({
   onCreateQuest,
   onCancelCreate,
   onAddSubtask,
-  onFloatingPlusClick,
   onDeleteQuest,
   onArchiveQuest,
   onUpdateQuest,

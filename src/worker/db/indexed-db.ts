@@ -204,15 +204,19 @@ export class IndexedDb extends Dexie {
     operation: Omit<SyncOperation, "id" | "timestamp">
   ): Promise<void> {
     const id = `${operation.collection}-${operation.documentId || Date.now()}`;
-    console.log("In indexed db, In queue sync");
+    console.log("[IndexedDB] queueSync called for collection:", operation.collection);
 
-    await this.syncQueue.put({
+    const syncOp: SyncOperation = {
       ...operation,
       id,
-      // timestamp: Date.now().toString(),
-      retries: 0,
-      error: null,
-    } as SyncOperation);
+      timestamp: Date.now(),
+      retries: operation.retries || 0,
+      error: operation.error || null,
+    } as SyncOperation;
+
+    console.log("[IndexedDB] Adding to syncQueue:", syncOp);
+    await this.syncQueue.put(syncOp);
+    console.log("[IndexedDB] Operation added to syncQueue successfully");
   }
 
   /**

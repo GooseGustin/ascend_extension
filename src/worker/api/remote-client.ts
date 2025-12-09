@@ -7,11 +7,23 @@
 import type { Quest } from '../models/Quest';
 import type { GMSuggestion } from '../models/GMSuggestion';
 
+const apiUrl = "http://localhost:4000";
+
 /** Agent metrics critical for Quest difficulty validation. */
 export interface MinimalAgentMetrics {
-  weeklyVelocity: number;
-  consistencyScore: number;
-  burnoutRisk: 'Low' | 'Medium' | 'High' | 'Severe'; 
+  weeklyVelocity: number; // XP per hour this week
+  monthlyConsistency: number; // Percentage (0-100)
+  burnoutRisk: 'Low' | 'Medium' | 'High' | 'Critical';
+  
+  // Detailed breakdown
+  averageSessionQuality: number; // 0-100
+  streakDays: number;
+  activeQuestCount: number;
+  overdueQuestCount: number;
+  
+  // Trend indicators
+  velocityTrend: 'improving' | 'stable' | 'declining';
+  consistencyTrend: 'improving' | 'stable' | 'declining';
 }
 
 export interface GMValidationContext {
@@ -40,11 +52,13 @@ export interface ValidationResult {
   errorCode?: string; // e.g., 'GM_004: Insufficient context'
 }
 
+
+
 export class RemoteAPI {
   private baseURL: string;
   private authToken: string | null = null;
-
-  constructor(baseURL: string = import.meta.env.VITE_API_URL || 'https://api.ascend.app') {
+  constructor(baseURL: string = apiUrl || 'https://api.ascend.app') {
+    // console.log('[RemoteAPI], apiUrl', apiUrl); 
     this.baseURL = baseURL;
   }
 
@@ -65,10 +79,29 @@ export class RemoteAPI {
   /**
    * Validate quest difficulty with GM
    */
-  async validateQuest(quest: Quest, userContext: any): Promise<ValidationResult> {
+  async validateQuest(quest: Quest, userContext: GMValidationContext): Promise<ValidationResult> {
     if (!this.isOnline()) {
       throw new Error('Cannot validate quest while offline');
     }
+
+    const payload = {
+      userId: userContext.userId,
+
+      quest: {
+        questId: quest.questId,
+        title: quest.title,
+        description: quest.description,
+        subtasks: quest.subtasks.map(st => ({
+          title: st.title,
+          estimatePomodoros: st.estimatePomodoros ?? 1
+        })),
+        userAssignedDifficulty: quest.difficulty.userAssigned,
+        timeEstimateHours: quest.timeEstimateHours
+      },
+
+      metrics: userContext.metrics
+    };
+
 
     const response = await fetch(`${this.baseURL}/agent/validate-quest`, {
       method: 'POST',
@@ -76,31 +109,24 @@ export class RemoteAPI {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${this.authToken}`
       },
-      body: JSON.stringify({
-        questId: quest.questId,
-        questData: {
-          title: quest.title,
-          description: quest.description,
-          subtasks: quest.subtasks
-        },
-        userContext
-      })
+      body: JSON.stringify(payload)
     });
+    console.log('Sent payload to', this.baseURL, payload);
 
     if (!response.ok) {
       throw new Error(`Validation failed: ${response.statusText}`);
     }
 
-    // return await response.json();
-    return {
-      status: 'validated',
-      suggestedDifficulty: quest.difficulty.userAssigned,
-      suggestedXpPerPomodoro: quest.difficulty.xpPerPomodoro,
-      // Default placeholder values for the new fields
-      confidence: 0.95, 
-      reasoning: "Based on your current Weekly Velocity (3.2 quests/week) and Low Burnout Risk, the user-selected difficulty is appropriate. Maintain this pace, Warrior.",
-      recommendations: ["Ensure subtasks are clearly defined."],
-    };
+    return await response.json();
+    // return {
+    //   status: 'validated',
+    //   suggestedDifficulty: quest.difficulty.userAssigned,
+    //   suggestedXpPerPomodoro: quest.difficulty.xpPerPomodoro,
+    //   // Default placeholder values for the new fields
+    //   confidence: 0.95, 
+    //   reasoning: "Based on your current Weekly Velocity (3.2 quests/week) and Low Burnout Risk, the user-selected difficulty is appropriate. Maintain this pace, Warrior.",
+    //   recommendations: ["Ensure subtasks are clearly defined."],
+    // };
   }
 
   /**

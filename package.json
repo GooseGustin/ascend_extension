@@ -1,5 +1,5 @@
 {
-      "name": "Productivity App Home View",
+      "name": "productivity-app-home-view",
       "version": "0.1.0",
       "private": true,
       "dependencies": {
@@ -34,6 +34,7 @@
             "cmdk": "^1.1.1",
             "dexie": "^4.2.1",
             "embla-carousel-react": "^8.6.0",
+            "esbuild": "^0.27.1",
             "input-otp": "^1.4.2",
             "lucide-react": "^0.487.0",
             "next-themes": "^0.4.6",
@@ -57,6 +58,9 @@
       },
       "scripts": {
             "dev": "vite",
-            "build": "vite build"
+            "build": "vite build",
+            "build:worker": "node build-worker.js",
+            "build:dev-worker": "esbuild src/worker/worker-debug.ts --bundle --outfile=dev-worker.js --format=esm",
+            "build:ext-worker": "tsc src/worker/worker.ts --outDir extension --target ES2020 --module ES2020"
       }
 }

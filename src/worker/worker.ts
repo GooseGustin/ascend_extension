@@ -4,10 +4,11 @@
 import { QuestService } from "./services/quest.service";
 import { SyncService } from "./services/sync.service";
 import { getDB } from "./db/indexed-db"; 
+import './background-window';
 // Note: GMService is indirectly available via QuestService
 
 // Define the processing interval (60 seconds)
-const GM_QUEUE_INTERVAL = 60000;
+const GM_QUEUE_INTERVAL = 10000; // test
 
 // Instantiate core services
 const questService = new QuestService();
@@ -30,7 +31,9 @@ async function startWorkerLoop() {
     setInterval(async () => {
         try {
             // Call the queue processor exposed by the GMService instance inside QuestService
+            console.log("Running GM Queue Processor...");
             await questService.gmService.processPendingQueue();
+            console.log("GM Queue Processor executed successfully.");
         } catch (e) {
             console.error("GM Queue Processor failed:", e);
         }

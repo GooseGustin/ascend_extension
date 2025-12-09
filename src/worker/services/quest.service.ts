@@ -13,7 +13,7 @@ import { AnalyticsService } from "./analytics.service"; //
 export class QuestService {
   private db = getDB();
   private authService: AuthService;
-  private gmService: GMService; // ADDED
+  public gmService: GMService; // ADDED
   private QUEST_COLORS = [
     "#4F8EF7",
     "#5CC8FF",
@@ -78,6 +78,9 @@ export class QuestService {
       documentId: quest.questId,
       data: quest, // Sending the full object for consistency
       priority: 7,
+      userId: quest.ownerId,
+      retries: 0,
+      error: null,
     });
   }
 
@@ -173,7 +176,8 @@ export class QuestService {
       quest.watchers.push(userId);
     }
 
-    await this.db.quests.update(questId, quest);
+    // Use put when replacing the entire object (update expects a partial UpdateSpec)
+    await this.db.quests.put(quest);
 
     // Queue for sync
     await this.db.queueSync({
@@ -182,6 +186,9 @@ export class QuestService {
       documentId: questId,
       data: quest,
       priority: 6,
+      userId: quest.ownerId,
+      retries: 0,
+      error: null,
     });
 
     return quest;
@@ -211,7 +218,7 @@ export class QuestService {
     type: "encouragement" | "question" | "suggestion" = "encouragement"
   ): Promise<GoalComment> {
     const comment: GoalComment = {
-      commentId: crypto.randomUUID(),
+      id: crypto.randomUUID(),
       questId,
       userId,
       username,
@@ -228,9 +235,12 @@ export class QuestService {
     await this.db.queueSync({
       operation: "create",
       collection: "comments",
-      documentId: comment.commentId,
+      documentId: comment.id,
       data: comment,
       priority: 6,
+      userId: comment.userId,
+      retries: 0,
+      error: null,
     });
 
     return comment;
@@ -249,7 +259,6 @@ export class QuestService {
 
   /**
    * Join a guild/dungeon quest
-   */
   async joinQuest(userId: string, questId: string): Promise<Quest> {
     const quest = await this.db.quests.get(questId);
     if (!quest) throw new Error("Quest not found");
@@ -258,7 +267,8 @@ export class QuestService {
       quest.members.push(userId);
     }
 
-    await this.db.quests.update(questId, quest);
+    // Use put to replace the full Quest object instead of update (which expects an UpdateSpec)
+    await this.db.quests.put(quest);
 
     await this.db.queueSync({
       operation: "update",
@@ -266,9 +276,13 @@ export class QuestService {
       documentId: questId,
       data: quest,
       priority: 7,
+      userId: quest.ownerId,
+      retries: 0,
+      error: null,
     });
 
     return quest;
+  }
   }
 
   /**
@@ -330,7 +344,10 @@ export class QuestService {
     );
     const totalMinutes =
       totalPomodoros * questData.schedule.pomodoroDurationMin;
-    const timeEstimateHours = questData.timeEstimateHours ?? totalMinutes / 60; // Use explicit value if provided, else calculate
+    const calculatedHours = totalMinutes > 0 ? totalMinutes / 60 : 1; // Default to 1 hour if no subtasks
+    const timeEstimateHours = questData.timeEstimateHours ?? calculatedHours; // Use explicit value if provided, else calculate
+
+    console.log(`[QuestService] timeEstimateHours calculation: totalPomodoros=${totalPomodoros}, totalMinutes=${totalMinutes}, timeEstimateHours=${timeEstimateHours}`);
 
     // Create the quest object
     const quest: Quest = {
@@ -408,21 +425,35 @@ export class QuestService {
     }
 
     // Save to database
+    console.log(`[QuestService] Saving quest to database...`);
     await this.db.quests.add(quest);
+    console.log(`[QuestService] Quest saved to database: ${questId}`);
 
     // Create sync operation
+    console.log(`[QuestService] Creating sync operation...`);
     await this.db.queueSync({
       operation: "create",
       collection: "quests",
       documentId: questId,
       data: quest,
+      priority: 7,
+      userId: quest.ownerId,
+      retries: 0,
+      error: null,
     });
+    console.log(`[QuestService] Sync operation queued`);
 
     // NEW: Trigger GM Validation Queue for new quests (unless it's a Trivial TodoQuest)
+    console.log(`[QuestService] Quest type check: isTodoQuest=${isTodoQuest}, type=${questData.type}`);
     if (!isTodoQuest) {
+      console.log(`[QuestService] Queueing validation for quest ${questId}`);
       await this.gmService.queueValidation(userId, questId);
+      console.log(`[QuestService] Validation queued successfully`);
+    } else {
+      console.log(`[QuestService] Skipping validation for TodoQuest`);
     }
 
+    console.log(`[QuestService] Quest creation completed: ${questId}`);
     return quest;
   }
 
@@ -495,6 +526,10 @@ export class QuestService {
       collection: "quests",
       documentId: questId,
       data: { subtasks: quest.subtasks },
+      priority: 7,
+      userId: quest.ownerId,
+      retries: 0,
+      error: null,
     });
 
     return quest;
@@ -512,13 +547,6 @@ export class QuestService {
     if (quest.ownerId !== userId) {
       throw new Error("Access denied");
     }
-
-    // Delete subtasks (if stored separately)
-    // if (Array.isArray(quest.subtasks)) {
-    //   for (const sub of quest.subtasks) {
-    //     await this.db.tasks.delete(sub.id).catch(() => {});
-    //   }
-    // }
 
     // Delete quest itself
     await this.db.quests.delete(questId);
@@ -548,7 +576,11 @@ export class QuestService {
       operation: "delete",
       collection: "quests",
       documentId: questId,
+      data: null,
       priority: 9,
+      userId: quest.ownerId,
+      retries: 0,
+      error: null,
     });
   }
 }

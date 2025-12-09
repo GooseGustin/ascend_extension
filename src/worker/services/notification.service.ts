@@ -53,7 +53,7 @@ export class NotificationService {
     priority: Notification['priority'] = 'normal'
   ): Promise<Notification> {
     const notification: Notification = {
-      notificationId: crypto.randomUUID(),
+      id: crypto.randomUUID(),
       userId,
       type,
       title,
@@ -72,9 +72,12 @@ export class NotificationService {
     await this.db.queueSync({
       operation: 'create',
       collection: 'notifications',
-      documentId: notification.notificationId,
+      documentId: notification.id,
       data: notification,
-      priority: 6
+      priority: 6, 
+      userId: notification.userId,
+      retries: 0,
+      error: null,
     });
 
     return notification;

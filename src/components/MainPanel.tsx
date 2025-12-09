@@ -236,7 +236,10 @@ export function MainPanel({
                   color: q.color,
                 }))}
                 selectedQuestId={selectedQuestId || null}
-                onSelect={(questId) => onQuestSelect?.(questId)}
+                onSelect={(questId) => {
+                  setSelectedQuestId(questId);
+                  onQuestSelect?.(questId);
+                }}
                 placeholder="Select a quest..."
               />
               

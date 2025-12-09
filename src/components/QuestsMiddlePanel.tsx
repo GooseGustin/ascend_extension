@@ -271,7 +271,7 @@ export function QuestsMiddlePanel({
           <div className="space-y-2">
             {notifications.slice(0, 5).map((notification) => (
               <button
-                key={notification.notificationId}
+                key={notification.id}
                 onClick={() => notification.questId && onNotificationClick(notification.questId)}
                 className="w-full text-left p-2 rounded bg-[#202225] hover:bg-[#34373c] transition-colors"
               >

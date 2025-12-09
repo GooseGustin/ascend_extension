@@ -9,7 +9,6 @@ import { ProgressMainPanel } from "./components/ProgressMainPanel";
 import { ProgressMiddlePanel } from "./components/ProgressMiddlePanel";
 import { SettingsMiddlePanel } from "./components/SettingsMiddlePanel";
 import { SettingsMainPanel } from "./components/SettingsMainPanel";
-// import { FloatingPlusButton } from "./components/FloatingPlusButton";
 import {
   AuthService,
   QuestService,
@@ -26,7 +25,6 @@ import type {
 } from "./worker/models/Quest";
 import type { GoalComment } from "./worker/models/GoalComment";
 import type { Notification as WorkerNotification } from "./worker/models/Notification";
-// import { TaskOrderItem } from "./worker/models/TaskOrder";
 import { useModal } from "./context/ModalContext";
 import {
   loadHomeTaskOrder,
@@ -37,6 +35,9 @@ import {
 import questToTasks from "./worker/utils/quest-to-tasks";
 import { migrateTaskOrderStorage } from "./worker/utils/migrate-task-orders";
 import { initializeTheme, applyAccentColor, applyTheme } from "./worker/utils/theme";
+// import ("/worker/worker-debug"); // Load worker in dev mode
+// import ("./worker/worker-debug")
+import startWorkerLoop from "./worker/worker-debug";
 
 // Keep existing UI interfaces for Figma compatibility
 export interface Task {
@@ -97,6 +98,16 @@ export default function App() {
   // Initialize on mount
   useEffect(() => {
     initializeApp();
+  }, []);
+
+  // Initialize worker once on mount
+  useEffect(() => {
+    console.log("[DEV] Starting worker loop once");
+    startWorkerLoop().catch(e => {
+      console.error("FATAL: Error starting worker:", e);
+    });
+    // Worker loop runs continuously via setInterval inside startWorkerLoop
+    // No need to call it repeatedly from here
   }, []);
 
   useEffect(() => {
@@ -757,7 +768,7 @@ export default function App() {
           onCreateQuest={handleCreateQuest}
           onCancelCreate={handleCancelCreate}
           onAddSubtask={handleAddSubtask}
-          onFloatingPlusClick={handleFloatingPlusClick}
+          // onFloatingPlusClick={handleFloatingPlusClick}
           onDeleteQuest={handleDeleteQuest}
           onArchiveQuest={handleArchiveQuest}
           onUpdateQuest={handleUpdateQuest}

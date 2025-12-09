@@ -13,7 +13,7 @@ import type { Quest } from '../models/Quest';
  *          + (todo flag × 0.1)
  */
 export function calculateTaskPriority(quest: Quest): number {
-  console.log('Sorting quests by priority');
+  // console.log('Sorting quests by priority');
   
   let priority = 0;
 

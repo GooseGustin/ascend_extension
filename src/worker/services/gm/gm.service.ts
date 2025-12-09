@@ -79,23 +79,37 @@ export class GMService {
    * Queues a quest for validation by the GM agent. This is the new entry point.
    */
   async queueValidation(userId: string, questId: string): Promise<void> {
+    console.log(`[GMService] queueValidation called for questId=${questId}, userId=${userId}`);
+
     const quest = await this.questService.getQuest(questId);
-    if (!quest) return;
+    if (!quest) {
+      console.log(`[GMService] Quest not found: ${questId}, aborting validation queue`);
+      return;
+    }
+
+    console.log(`[GMService] Quest found, current validationStatus: ${quest.validationStatus}`);
 
     // Optimistic update: mark as 'queued'
     if (quest.validationStatus !== "queued") {
+      console.log(`[GMService] Updating quest validationStatus to 'queued'`);
       quest.validationStatus = "queued";
       await this.questService.saveQuest(quest);
+    } else {
+      console.log(`[GMService] Quest already queued, skipping status update`);
     }
 
     // Queue the operation using the existing SyncQueue architecture
+    console.log(`[GMService] Adding validation operation to sync queue...`);
     await this.db.queueSync({
       collection: "gm_validation" as "gm_validation",
       documentId: questId,
       userId: userId,
       priority: 2, // High priority
-      action: "validate",
+      operation: "validate",
+      retries: 0,
+      error: null,
     } as SyncOperation);
+    console.log(`[GMService] Validation operation queued successfully in syncQueue`);
   }
 
   // --- Existing Method: Remote Validation (MODIFIED/RENAMED for clarity) ---
@@ -106,17 +120,16 @@ export class GMService {
    * RENAMED from validateQuest to validateQuestRemote.
    */
   async validateQuestRemote(userId: string, quest: Quest): Promise<void> {
+    console.log('[GM Service] validateQuestRemote called');
     // 1. Gather Context (Required by the RemoteAPI signature)
     const metrics: PerformanceMetrics =
       await this.analyticsService.generateAgentState(userId);
 
     // Construct the context expected by RemoteAPI.validateQuest(quest, userContext)
-    // This maps the full PerformanceMetrics to the MinimalAgentMetrics required by the API
-    const minimalMetrics: MinimalAgentMetrics = {
-      weeklyVelocity: metrics.weeklyVelocity,
-      consistencyScore: metrics.monthlyConsistency, // Assuming consistencyScore maps to monthlyConsistency
-      burnoutRisk: metrics.burnoutRisk as "Low" | "Medium" | "High" | "Severe",
-    };
+    // Remove calculatedAt from metrics before sending to backend
+    const { calculatedAt, ...minimalMetrics } = metrics;
+
+    console.log('[GM Service] Metrics after removing calculatedAt:', minimalMetrics);
 
     const userContext: GMValidationContext = {
       userId: userId,
@@ -127,10 +140,17 @@ export class GMService {
     const validationResult: ValidationResult =
       await this.remoteApi.validateQuest(quest, userContext);
 
-    if (
-      validationResult.status === "validated" &&
-      validationResult.suggestedDifficulty
-    ) {
+    console.log('[GM Service] Remote validation result:', validationResult);
+
+    // 3. Process Response
+    // Check if validation succeeded (either has status="validated" OR has suggestedDifficulty)
+    const isValidated =
+      (validationResult.status === "validated" || !validationResult.status) &&
+      validationResult.suggestedDifficulty;
+
+    if (isValidated) {
+      console.log('[GM Service] Validation successful, updating quest...');
+
       // Update quest difficulty fields
       quest.difficulty.gmValidated = validationResult.suggestedDifficulty;
       quest.difficulty.isLocked = true;
@@ -151,12 +171,20 @@ export class GMService {
         validatedAt: quest.difficulty.validatedAt,
       } as GMFeedback;
 
+      console.log('[GM Service] Quest updated with validation:', {
+        gmValidated: quest.difficulty.gmValidated,
+        xpPerPomodoro: quest.difficulty.xpPerPomodoro,
+        validationStatus: quest.validationStatus
+      });
+
       await this.db.quests.put(quest);
+      console.log('[GM Service] Quest saved to database successfully');
     } else {
       // Treat remote failure (not just error) as a failure status
+      console.error('[GM Service] Validation failed, status:', validationResult.status);
       quest.validationStatus = "failed";
       await this.db.quests.put(quest);
-      throw new Error(`Remote validation failed: ${validationResult.status}`);
+      throw new Error(`Remote validation failed: ${validationResult.status || 'No status provided'}`);
     }
   }
 
@@ -228,16 +256,26 @@ export class GMService {
    * Tries remote validation first, falls back to local reasoning if remote fails.
    */
   async processPendingQueue(): Promise<void> {
-    const pendingOps: SyncOperation[] = await this.db.getPendingSyncOps(10);
-    const gmOps = pendingOps.filter(
-      (op) => op.collection === "gm_validation" && op.operation === "validate"
-    );
+    console.log("[GMService] processPendingQueue() called - ENTRY POINT");
 
-    if (gmOps.length === 0) return;
+    try {
+      console.log("[GMService] Fetching pending sync operations...");
+      const pendingOps: SyncOperation[] = await this.db.getPendingSyncOps(10);
+      console.log(`[GMService] Found ${pendingOps.length} total pending operations`);
 
-    console.log(
-      `GMService: Processing ${gmOps.length} pending validation requests.`
-    );
+      const gmOps = pendingOps.filter(
+        (op) => op.collection === "gm_validation" && op.operation === "validate"
+      );
+      console.log(`[GMService] Filtered to ${gmOps.length} GM validation operations`);
+
+      if (gmOps.length === 0) {
+        console.log("GMService: No pending validation requests in queue.");
+        return;
+      }
+
+      console.log(
+        `GMService: Processing ${gmOps.length} pending validation requests.`
+      );
 
     for (const op of gmOps) {
       const quest = await this.questService.getQuest(op.documentId);
@@ -273,6 +311,10 @@ export class GMService {
           );
         }
       }
+    }
+    } catch (error) {
+      console.error("[GMService] processPendingQueue() FATAL ERROR:", error);
+      throw error;
     }
   }
 

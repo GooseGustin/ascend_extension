@@ -9,10 +9,9 @@ import {
   Sparkles,
   Zap,
 } from "lucide-react";
-import { Quest } from "../worker/models/Quest";
+// import { Quest } from "../worker/models/Quest";
 
 interface QuestCreationFormProps {
-//   onCreateQuest: (quest: Omit<Quest, "id" | "currentXP" | "progress">) => void;
   onCreateQuest: () => void;
   onCancel: () => void;
 }
@@ -145,12 +144,19 @@ export function QuestCreationForm({
   };
 
   const handleSubmit = async () => {
-  if (!title.trim()) return;
+  console.log('[QuestCreationForm] handleSubmit called');
+
+  if (!title.trim()) {
+    console.log('[QuestCreationForm] No title provided, aborting');
+    return;
+  }
 
   try {
+    console.log('[QuestCreationForm] Importing QuestService...');
     const { QuestService } = await import('../worker');
     const questService = new QuestService();
-    
+    console.log('[QuestCreationForm] QuestService imported and instantiated');
+
     const questData: QuestFormData = {
       title: title.trim(),
       description: description.trim(),
@@ -169,14 +175,23 @@ export function QuestCreationForm({
       subtasks: subtasks.filter(st => st.title.trim()),
       icon: icon
     };
-    
+
+    console.log('[QuestCreationForm] Quest data prepared:', {
+      type: questData.type,
+      difficulty: questData.difficulty,
+      subtaskCount: questData.subtasks.length
+    });
+
+    console.log('[QuestCreationForm] Calling questService.createQuest...');
     const createdQuest = await questService.createQuest(questData);
-    
+    console.log('[QuestCreationForm] Quest created successfully:', createdQuest.questId);
+
     // Notify parent (which will reload quests)
     // onCreateQuest({});  // Empty object since quest is already created
+    console.log('[QuestCreationForm] Calling onCreateQuest callback');
     onCreateQuest();
   } catch (error) {
-    console.error('Failed to create quest:', error);
+    console.error('[QuestCreationForm] Failed to create quest:', error);
     alert('Failed to create quest. Please try again.');
   }
 };
@@ -303,7 +318,7 @@ export function QuestCreationForm({
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Describe your epic journey..."
+                placeholder="Describe where your epic journey will lead..."
                 rows={4}
                 className="w-full bg-[#202225] text-white px-4 py-3 rounded border-2 border-transparent focus:border-[#5865F2] outline-none transition-colors resize-none"
               />
@@ -477,7 +492,7 @@ export function QuestCreationForm({
                       onClick={() => handleRemoveTag(tag)}
                       className="hover:text-[#dcddde]"
                     >
-                      <X className="w-3 h-3" />a
+                      <X className="w-3 h-3" />
                     </button>
                   </span>
                 ))}

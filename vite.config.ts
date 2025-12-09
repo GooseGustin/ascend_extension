@@ -50,9 +50,23 @@
       },
     },
     build: {
-      target: 'esnext',
-      outDir: 'build',
+    rollupOptions: {
+      input: {
+        app: 'index.html',
+        worker: 'src/worker/worker.ts'
+      },
+      output: {
+        entryFileNames: chunk => {
+          if (chunk.name === 'worker') return 'background.js';
+          return '[name].[hash].js';
+        }
+      }
     },
+  },
+    // {
+    //   target: 'esnext',
+    //   outDir: 'build',
+    // },
     server: {
       port: 3000,
       open: true,
