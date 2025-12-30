@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Filter, Plus, Play } from "lucide-react";
+import { Filter, Plus, Play, RefreshCw } from "lucide-react";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { TaskList } from "./TaskList";
@@ -17,33 +17,39 @@ import type { TodayMetrics } from "../worker/services/analytics.service";
 import type { UserProfile } from "../worker/models/UserProfile";
 import { Quest, Subtask } from "../worker/models/Quest";
 import { FloatingPlusButton } from "./FloatingPlusButton";
+import { totalExpForLevel, xpToNextLevel, currentLevelFromExp, xpDeltaForLevel } from "../worker/utils/level-and-xp-converters";
 
 interface MainPanelProps {
   userId: string;
   tasks: Task[];
   workerQuests: Quest[];
+  dataVersion?: number;
   onToggleTask: (taskId: string) => void;
   onReorderTasks: (startIndex: number, endIndex: number) => void;
   onStartFocus: (task: Task | Subtask, questTitle?: string) => void;
   onFloatingPlusClick: () => void;
   onQuestSelect?: (questId: string) => void;
   onAddSubtask?: (questId: string, title: string) => void;
+  onRefresh?: () => void;
 }
 
 export function MainPanel({
   userId,
   tasks,
   workerQuests,
+  dataVersion,
   onToggleTask,
   onReorderTasks,
   onStartFocus,
   onFloatingPlusClick,
   onQuestSelect,
   onAddSubtask,
+  onRefresh,
 }: MainPanelProps) {
   const [filter, setFilter] = useState<"all" | "scheduled" | "pomodoro">("all");
   const [stats, setStats] = useState<TodayMetrics | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [totalSessions, setTotalSessions] = useState<number>(0);
   const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
 
   const analyticsService = new AnalyticsService();
@@ -55,18 +61,38 @@ export function MainPanel({
 
   useEffect(() => {
     loadStats();
-  }, [userId]);
+  }, [userId, dataVersion]);
 
   const loadStats = async () => {
+    console.log('[MainPanel] loadStats triggered - dataVersion:', dataVersion);
     try {
       const [metrics, profile] = await Promise.all([
         analyticsService.getTodayMetrics(userId),
         authService.getCurrentUser(),
       ]);
+
+      console.log('[MainPanel] Stats loaded:', {
+        todaySessions: metrics.sessionsCompleted,
+        userXP: profile?.experiencePoints,
+        userLevel: profile?.totalLevel
+      });
+
       setStats(metrics);
       setUserProfile(profile || null);
+
+      // Get total sessions count
+      const { getDB } = await import("../worker");
+      const db = getDB();
+      const allSessions = await db.sessions
+        .where("userId")
+        .equals(userId)
+        .and(s => s.status === "completed")
+        .toArray();
+      setTotalSessions(allSessions.length);
+
+      console.log('[MainPanel] ✅ Stats loaded - Total Sessions:', allSessions.length);
     } catch (error) {
-      console.error("Failed to load stats:", error);
+      console.error("[MainPanel] ❌ Failed to load stats:", error);
     }
   };
 
@@ -103,7 +129,20 @@ export function MainPanel({
     <div className="flex-1 bg-[#36393f] flex flex-col">
       {/* Title Bar */}
       <div className="h-12 px-6 flex items-center justify-between border-b border-[#202225] shrink-0">
-        <span className="text-white">Today</span>
+        <div className="flex items-center gap-3">
+          <span className="text-white">Today</span>
+          {onRefresh && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onRefresh}
+              className="h-7 w-7 p-0 hover:bg-[#4f545c]"
+              title="Refresh tasks"
+            >
+              <RefreshCw className="w-4 h-4 text-[#b9bbbe]" />
+            </Button>
+          )}
+        </div>
         <div className="flex gap-2">
           <Button
             variant={filter === "all" ? "default" : "ghost"}
@@ -154,23 +193,30 @@ export function MainPanel({
               <div>
                 <div className="text-xs text-[#b9bbbe] mb-1">Level</div>
                 <div className="text-2xl text-white">
-                  {userProfile?.totalLevel || 0}
+                  {userProfile ? currentLevelFromExp(userProfile.experiencePoints) : 0}
                 </div>
               </div>
               <div>
                 <div className="text-xs text-[#b9bbbe] mb-1">XP</div>
                 <div className="flex items-baseline gap-1">
                   <span className="text-2xl text-[#57F287]">
-                    {userProfile?.experiencePoints || 0}
+                    {userProfile ?
+                      Math.round(userProfile.experiencePoints - totalExpForLevel(currentLevelFromExp(userProfile.experiencePoints)))
+                      : 0}
                   </span>
-                  <span className="text-sm text-[#72767d]">/ 4000</span>
+                  <span className="text-sm text-[#72767d]">
+                    / {userProfile ? Math.round(xpDeltaForLevel(currentLevelFromExp(userProfile.experiencePoints))) : 0}
+                  </span>
                 </div>
                 <div className="w-32 h-1 bg-[#202225] rounded-full mt-1 overflow-hidden">
                   <div
                     className="h-full bg-[#57F287] rounded-full transition-all"
                     style={{
                       width: `${
-                        ((userProfile?.experiencePoints || 0) / 4000) * 100
+                        userProfile
+                          ? ((userProfile.experiencePoints - totalExpForLevel(currentLevelFromExp(userProfile.experiencePoints))) /
+                             xpDeltaForLevel(currentLevelFromExp(userProfile.experiencePoints))) * 100
+                          : 0
                       }%`,
                     }}
                   />
@@ -189,14 +235,13 @@ export function MainPanel({
                   Total Sessions
                 </div>
                 <div className="text-2xl text-white">
-                  {/* TODO: Add total sessions to UserProfile */}
-                  142
+                  {totalSessions}
                 </div>
               </div>
               <div>
                 <div className="text-xs text-[#b9bbbe] mb-1">Active Quests</div>
                 <div className="text-2xl text-[#5865F2]">
-                  {/* TODO: Calculate from quests */}4
+                  {workerQuests.filter(q => !q.isCompleted && !q.hidden).length}
                 </div>
               </div>
             </div>

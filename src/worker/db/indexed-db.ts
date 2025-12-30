@@ -99,7 +99,7 @@ export class IndexedDb extends Dexie {
   }
 
   /**
-   * Get active quests for user
+   * Get active quests for user (excludes completed and hidden quests)
    */
   async getActiveQuests(userId: string): Promise<Quest[]> {
     console.log("In indexed-db, getActiveQuests", userId);
@@ -110,7 +110,7 @@ export class IndexedDb extends Dexie {
       // .equals([userId, 0] as any) // 0 = false
       .toArray();
     console.log("User, quests", userId, quests);
-    return quests.filter((q) => q.isCompleted === false);
+    return quests.filter((q) => q.isCompleted === false && q.hidden === false);
   }
 
   /**

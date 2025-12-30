@@ -92,6 +92,21 @@ export function ProductivitySection({ settings, onUpdate }: ProductivitySectionP
 
           <div className="flex items-center justify-between max-w-md">
             <div>
+              <Label className="text-[#dcddde]">Auto-start Break</Label>
+              <p className="text-sm text-[#72767d] mt-1">
+                Automatically start break after completing a pomodoro
+              </p>
+            </div>
+            <Switch
+              checked={settings.productivity.pomodoro.autoStartBreak}
+              onCheckedChange={(checked) =>
+                handlePomodoroChange('autoStartBreak', checked)
+              }
+            />
+          </div>
+
+          <div className="flex items-center justify-between max-w-md">
+            <div>
               <Label className="text-[#dcddde]">Auto-start Next Pomodoro</Label>
               <p className="text-sm text-[#72767d] mt-1">
                 Automatically start the next session
@@ -102,6 +117,73 @@ export function ProductivitySection({ settings, onUpdate }: ProductivitySectionP
               onCheckedChange={(checked) =>
                 handlePomodoroChange('autoStartNext', checked)
               }
+            />
+          </div>
+        </div>
+      </div>
+
+      <Separator className="bg-[#202225]" />
+
+      {/* Deep Focus Settings */}
+      <div>
+        <h3 className="text-white mb-4 font-semibold">Deep Focus Mode</h3>
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="deepFocusMax" className="text-[#b9bbbe]">
+              Maximum Duration (minutes)
+            </Label>
+            <p className="text-sm text-[#72767d] mt-1 mb-2">
+              Cap for deep focus sessions (default: 120 minutes)
+            </p>
+            <Input
+              id="deepFocusMax"
+              type="number"
+              min="30"
+              max="240"
+              value={settings.productivity.deepFocus.maxDurationMin}
+              onChange={async (e) => {
+                const value = parseInt(e.target.value) || 120;
+                await onUpdate({
+                  productivity: {
+                    ...settings.productivity,
+                    deepFocus: {
+                      ...settings.productivity.deepFocus,
+                      maxDurationMin: value,
+                    },
+                  },
+                });
+              }}
+              className="mt-2 bg-[#202225] border-[#202225] text-[#dcddde] max-w-xs"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="deepFocusXP" className="text-[#b9bbbe]">
+              XP Rate Multiplier
+            </Label>
+            <p className="text-sm text-[#72767d] mt-1 mb-2">
+              XP earning rate compared to pomodoro (default: 0.5 = 50%)
+            </p>
+            <Input
+              id="deepFocusXP"
+              type="number"
+              min="0.1"
+              max="2"
+              step="0.1"
+              value={settings.productivity.deepFocus.xpRateMultiplier}
+              onChange={async (e) => {
+                const value = parseFloat(e.target.value) || 0.5;
+                await onUpdate({
+                  productivity: {
+                    ...settings.productivity,
+                    deepFocus: {
+                      ...settings.productivity.deepFocus,
+                      xpRateMultiplier: value,
+                    },
+                  },
+                });
+              }}
+              className="mt-2 bg-[#202225] border-[#202225] text-[#dcddde] max-w-xs"
             />
           </div>
         </div>

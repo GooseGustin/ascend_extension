@@ -256,17 +256,17 @@ export class GMService {
    * Tries remote validation first, falls back to local reasoning if remote fails.
    */
   async processPendingQueue(): Promise<void> {
-    console.log("[GMService] processPendingQueue() called - ENTRY POINT");
+    // console.log("[GMService] processPendingQueue() called - ENTRY POINT");
 
     try {
-      console.log("[GMService] Fetching pending sync operations...");
+      // console.log("[GMService] Fetching pending sync operations...");
       const pendingOps: SyncOperation[] = await this.db.getPendingSyncOps(10);
-      console.log(`[GMService] Found ${pendingOps.length} total pending operations`);
+      // console.log(`[GMService] Found ${pendingOps.length} total pending operations`);
 
       const gmOps = pendingOps.filter(
         (op) => op.collection === "gm_validation" && op.operation === "validate"
       );
-      console.log(`[GMService] Filtered to ${gmOps.length} GM validation operations`);
+      // console.log(`[GMService] Filtered to ${gmOps.length} GM validation operations`);
 
       if (gmOps.length === 0) {
         console.log("GMService: No pending validation requests in queue.");

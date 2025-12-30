@@ -16,6 +16,7 @@ export interface Quest {
   hidden: boolean;
   priority: "A" | "B" | "C";
   color: string; // Hex color code
+  behavior: "repeating" | "progressive"; // Quest behavioral mode
 
   difficulty: {
     userAssigned: DifficultyTier;
@@ -27,12 +28,12 @@ export interface Quest {
   };
 
   schedule: {
-    frequency: "Daily" | "Weekly" | "Custom";
+    frequency: "Daily" | "Weekly";
     targetCompletionsPerCycle: number;
     pomodoroDurationMin: number;
     breakDurationMin: number;
     preferredTimeSlots: string[]; // HH:MM format
-    customDays?: number[];
+    customDays?: number[]; // Days of week (0=Sunday, 1=Monday, etc.) for Weekly frequency
   };
 
   subtasks: Subtask[];

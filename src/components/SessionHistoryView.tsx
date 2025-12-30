@@ -5,10 +5,11 @@ import { AnalyticsService } from '../worker/services/analytics.service';
 import { QuestService } from '../worker/services/quest.service';
 
 interface SessionHistoryViewProps {
+  userId: string;
   logType?: 'session' | 'xp' | 'milestone';
 }
 
-export function SessionHistoryView({ logType = 'session' }: SessionHistoryViewProps) {
+export function SessionHistoryView({ userId, logType = 'session' }: SessionHistoryViewProps) {
   const [sessionHistory, setSessionHistory] = useState<any[]>([]);
   const [xpLogs, setXpLogs] = useState<any[]>([]);
   const [milestoneLogs, setMilestoneLogs] = useState<any[]>([]);
@@ -98,9 +99,9 @@ export function SessionHistoryView({ logType = 'session' }: SessionHistoryViewPr
         ));
       }
     }
-    
+
     loadData();
-  }, [logType]);
+  }, [logType, userId]);
 
 
 //   const sessionHistory = [

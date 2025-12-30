@@ -82,7 +82,7 @@ export function XPLogsView({ userId }: XPLogsViewProps) {
     }
 
     loadXPData();
-  }, []);
+  }, [userId]);
 
   return (
     <div className="p-6">

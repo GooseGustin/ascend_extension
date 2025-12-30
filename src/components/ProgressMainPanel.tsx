@@ -25,11 +25,11 @@ export function ProgressMainPanel({ userId, selectedView }: ProgressMainPanelPro
       case 'by-quest':
         return <ByQuestView userId={userId} />;
       case 'session-history':
-        return <SessionHistoryView />;
+        return <SessionHistoryView userId={userId} />;
       case 'xp-logs':
         return <XPLogsView userId={userId} />;
       case 'milestone-log':
-        return <SessionHistoryView logType="milestone" />;
+        return <SessionHistoryView userId={userId} logType="milestone" />;
       case 'weak-quests':
         return <WeakQuestsView userId={userId} />;
       case 'best-quests':

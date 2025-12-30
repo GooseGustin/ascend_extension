@@ -15,6 +15,7 @@ import {
   Archive,
   Trash2,
 } from "lucide-react";
+import { totalExpForLevel, currentLevelFromExp, xpToNextLevel, xpDeltaForLevel } from "../worker/utils/level-and-xp-converters";
 import { Checkbox } from "./ui/checkbox";
 import { Button } from "./ui/button";
 import { Textarea } from "./ui/textarea";
@@ -81,29 +82,6 @@ export function QuestDetails({
     setLocalSubtasks(quest.subtasks);
   }, [quest.questId]);
 
-  // Load saved order on mount
-  // useEffect(() => {
-  //   async function loadSubtaskOrder() {
-  //     try {
-  //       const authService = new AuthService();
-  //       const userId = await authService.getCurrentUserId();
-
-  //       // Load from localStorage first (primary source)
-  //       const savedOrder = loadTaskOrder(userId, quest.questId);
-
-  //       if (savedOrder && savedOrder.length > 0) {
-  //         // Apply the saved order (you'll need to trigger parent re-render)
-  //         // For now, this just logs - you'd need a callback to parent to update quest.subtasks
-  //         console.log("[QuestDetails] Loaded subtask order:", savedOrder);
-  //       }
-  //     } catch (error) {
-  //       console.error("Failed to load subtask order:", error);
-  //     }
-  //   }
-
-  //   loadSubtaskOrder();
-  // }, [quest.questId]);
-
   useEffect(() => {
     async function loadSubtaskOrder() {
       try {
@@ -138,14 +116,6 @@ export function QuestDetails({
     if (!newSubtaskTitle.trim()) return;
 
     try {
-      // Import at top of file
-      // const questService = new QuestService();
-
-      // await questService.addSubtask(quest.questId, {
-      //   title: newSubtaskTitle.trim(),
-      //   estimatePomodoros: 1,
-      // });
-
       // Call parent handler
       onAddSubtask(quest.questId, newSubtaskTitle.trim());
       setNewSubtaskTitle("");
@@ -274,9 +244,11 @@ export function QuestDetails({
     onEditModeStart?.(quest);
   };
 
-  const progress = Math.round(
-    (quest.gamification.currentExp / quest.gamification.expToNextLevel) * 100
-  );
+  // Calculate XP progress within current level (recalculate actual level from XP)
+  const actualLevel = currentLevelFromExp(quest.gamification.currentExp);
+  const currentXPGottenInNewLevel = Math.round(quest.gamification.currentExp - totalExpForLevel(actualLevel));
+  const totalXPNeededForLevel = Math.round(xpDeltaForLevel(actualLevel));
+  const progress = Math.round((currentXPGottenInNewLevel / totalXPNeededForLevel) * 100);
   const color = getColorForDifficulty(quest.difficulty.userAssigned);
 
   // Convert progressHistory to milestones format
@@ -355,15 +327,14 @@ export function QuestDetails({
               <div>
                 <div className="text-xs text-[#b9bbbe] mb-1">Quest Level</div>
                 <div className="text-2xl text-white">
-                  {quest.gamification.currentLevel}
+                  {actualLevel}
                 </div>
               </div>
               <div className="flex-1 max-w-md mx-8">
                 <div className="flex items-baseline justify-between mb-1">
                   <span className="text-xs text-[#b9bbbe]">XP Progress</span>
                   <span className="text-xs text-[#b9bbbe]">
-                    {quest.gamification.currentExp} /{" "}
-                    {quest.gamification.expToNextLevel}
+                    {currentXPGottenInNewLevel} / {totalXPNeededForLevel}
                   </span>
                 </div>
                 <div className="w-full h-2 bg-[#202225] rounded-full overflow-hidden">
@@ -409,6 +380,25 @@ export function QuestDetails({
               </div>
             </div>
           </div>
+
+          {/* Tags */}
+          {quest.tags && quest.tags.length > 0 && (
+            <div className="mb-6">
+              <div className="bg-[#2f3136] rounded-lg p-4">
+                <div className="text-xs text-[#b9bbbe] mb-3">Tags</div>
+                <div className="flex flex-wrap gap-2">
+                  {quest.tags.map((tag, index) => (
+                    <span
+                      key={index}
+                      className="bg-[#5865F2] text-white px-3 py-1 rounded text-sm"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Milestones */}
           {milestones.length > 0 && (

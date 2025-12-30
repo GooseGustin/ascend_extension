@@ -7,6 +7,7 @@ import { getDB } from '../db/indexed-db';
 import type { Session, PauseEvent } from '../models/Session';
 import type { UserProfile } from '../models/UserProfile';
 import type { Quest } from '../models/Quest';
+import { currentLevelFromExp } from '../utils/level-and-xp-converters';
 
 export class SessionService {
   private db = getDB();
@@ -21,6 +22,11 @@ export class SessionService {
     plannedDurationMin: number,
     sessionType: 'pomodoro' | 'deep_focus' = 'pomodoro'
   ): Promise<Session> {
+    // Check daily caps before creating session
+    if (sessionType === 'pomodoro') {
+      await this.checkDailyCaps(userId, questId);
+    }
+
     const session: Session = {
       sessionId: crypto.randomUUID(),
       sessionType,
@@ -315,8 +321,11 @@ export class SessionService {
 
     // Calculate XP based on session type
     let xpEarned = 0;
-    
-    if (session.sessionType === 'pomodoro') {
+
+    // Anti-abuse: No XP for sessions under 2 minutes (reduced for testing)
+    const isValidSession = actualDurationMin >= 2;
+
+    if (session.sessionType === 'pomodoro' && isValidSession) {
       const baseXP = quest.difficulty.xpPerPomodoro;
       const qualityMultiplier = qualityScore >= 50 ? 1.0 : 0.5;
       xpEarned = Math.floor(baseXP * qualityMultiplier);
@@ -328,7 +337,7 @@ export class SessionService {
       if (quest.isDungeon) {
         xpEarned = Math.floor(xpEarned * 1.5);
       }
-    } else if (session.sessionType === 'deep_focus') {
+    } else if (session.sessionType === 'deep_focus' && isValidSession) {
       // Deep focus XP calculation
       const pomodoroXPRate = quest.difficulty.xpPerPomodoro / 25; // XP per minute
       const deepFocusXPRate = pomodoroXPRate * settings.productivity.deepFocus.xpRateMultiplier;
@@ -367,11 +376,62 @@ export class SessionService {
     // Check for level up
     const levelUp = await this.checkQuestLevelUp(quest);
 
-    await this.db.quests.update(quest.questId, quest);
+    try {
+      await this.db.quests.put(quest);
+      console.log('[SessionService] ✅ Quest saved to DB');
+    } catch (error) {
+      console.error('[SessionService] ❌ Failed to save quest:', error);
+      throw error;
+    }
 
-    // Update user total XP
+    // Update user total XP and level
+    const oldXP = userProfile.experiencePoints;
+    const oldLevel = userProfile.totalLevel;
+
     userProfile.experiencePoints += xpEarned;
-    await this.db.users.update(userProfile.userId, userProfile);
+    userProfile.totalLevel = currentLevelFromExp(userProfile.experiencePoints);
+
+    console.log('[SessionService] Updating user profile:', {
+      userId: userProfile.userId,
+      oldXP,
+      newXP: userProfile.experiencePoints,
+      xpEarned,
+      oldLevel,
+      newLevel: userProfile.totalLevel
+    });
+
+    try {
+      await this.db.users.put(userProfile);
+      console.log('[SessionService] ✅ User profile saved to DB');
+
+      // Verify the write
+      const verification = await this.db.users.get(userProfile.userId);
+      console.log('[SessionService] 🔍 Verification - User XP in DB:', verification?.experiencePoints);
+    } catch (error) {
+      console.error('[SessionService] ❌ Failed to save user profile:', error);
+      throw error;
+    }
+
+    // Queue user profile sync
+    await this.db.queueSync({
+      operation: 'update',
+      collection: 'users',
+      documentId: userProfile.userId,
+      data: userProfile,
+      priority: 10,  // Critical - matches session priority
+    });
+    console.log('[SessionService] ✅ User profile queued for sync');
+
+    // Update user streak (only for completed sessions with meaningful duration)
+    let streakUpdated = false;
+    if (actualDurationMin >= 2) {
+      const analyticsService = await import('./analytics.service').then(m => new m.AnalyticsService());
+      const streakResult = await analyticsService.updateStreak(session.userId);
+
+      // Note: streakResult contains currentStreak, longestStreak, streakBroken
+      // Could be used for UI notifications
+      streakUpdated = true;
+    }
 
     // Queue for sync
     await this.db.queueSync({
@@ -394,6 +454,7 @@ export class SessionService {
     const shouldStartBreak =
       session.sessionType === 'pomodoro' &&
       settings.productivity.pomodoro.autoStartBreak;
+    console.log(`[SessionService] shouldStartBreak: ${shouldStartBreak}`);
 
     return {
       session,
@@ -401,7 +462,7 @@ export class SessionService {
       qualityScore,
       levelUp,
       shouldStartBreak,
-      breakDurationMin: settings.productivity.pomodoro.breakDuration,
+      breakDurationMin: quest.schedule.breakDurationMin, // Use quest-specific break duration
     };
   }
 
@@ -519,7 +580,94 @@ export class SessionService {
       .equals(userId)
       .and(s => s.status === 'active' || s.status === 'paused')
       .toArray();
-    
+
     return sessions[0] || null;
+  }
+
+  /**
+   * Check daily Pomodoro caps
+   * Throws error if caps are exceeded
+   */
+  private async checkDailyCaps(userId: string, questId: string): Promise<void> {
+    const today = new Date().toISOString().split('T')[0];
+
+    // Get today's completed pomodoro sessions
+    const todaySessions = await this.db.sessions
+      .where('userId')
+      .equals(userId)
+      .filter(s =>
+        s.status === 'completed' &&
+        s.sessionType === 'pomodoro' &&
+        s.startTime.split('T')[0] === today &&
+        s.actualDurationMin >= 5 // Only count sessions ≥5 min
+      )
+      .toArray();
+
+    // Check total daily cap (50 pomodoros)
+    if (todaySessions.length >= 50) {
+      throw new Error('DAILY_CAP_REACHED: You have reached the daily limit of 50 pomodoro sessions. Take a break and return tomorrow!');
+    }
+
+    // Check per-quest cap (20 pomodoros)
+    const questSessions = todaySessions.filter(s => s.questId === questId);
+    if (questSessions.length >= 20) {
+      throw new Error('QUEST_CAP_REACHED: You have reached the daily limit of 20 pomodoro sessions for this quest. Work on a different quest or take a break!');
+    }
+
+    // Optional: Warn when approaching caps
+    if (todaySessions.length >= 45) {
+      console.warn(`[SessionService] Approaching daily cap: ${todaySessions.length}/50 sessions today`);
+    }
+    if (questSessions.length >= 18) {
+      console.warn(`[SessionService] Approaching quest cap: ${questSessions.length}/20 sessions for this quest today`);
+    }
+  }
+
+  /**
+   * Get today's session counts for cap warnings
+   */
+  async getTodaySessionCounts(userId: string, questId?: string): Promise<{
+    totalToday: number;
+    questToday: number;
+    totalCap: number;
+    questCap: number;
+    canCreateSession: boolean;
+    warningMessage?: string;
+  }> {
+    const today = new Date().toISOString().split('T')[0];
+
+    const todaySessions = await this.db.sessions
+      .where('userId')
+      .equals(userId)
+      .filter(s =>
+        s.status === 'completed' &&
+        s.sessionType === 'pomodoro' &&
+        s.startTime.split('T')[0] === today &&
+        s.actualDurationMin >= 5
+      )
+      .toArray();
+
+    const totalToday = todaySessions.length;
+    const questToday = questId
+      ? todaySessions.filter(s => s.questId === questId).length
+      : 0;
+
+    const canCreateSession = totalToday < 50 && (questId ? questToday < 20 : true);
+
+    let warningMessage: string | undefined;
+    if (totalToday >= 45) {
+      warningMessage = `You're approaching the daily limit (${totalToday}/50 sessions)`;
+    } else if (questId && questToday >= 18) {
+      warningMessage = `You're approaching the quest limit (${questToday}/20 sessions)`;
+    }
+
+    return {
+      totalToday,
+      questToday,
+      totalCap: 50,
+      questCap: 20,
+      canCreateSession,
+      warningMessage,
+    };
   }
 }

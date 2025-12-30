@@ -36,7 +36,7 @@ export function ProgressHeatmap({ userId }: ProgressHeatmapProps) {
     }
 
     loadHeatmap();
-  }, []);
+  }, [userId]);
 
   // Calculate intensity (0-4) based on duration
   const getIntensity = (duration: number) => {
@@ -111,7 +111,7 @@ export function ProgressHeatmap({ userId }: ProgressHeatmapProps) {
               Last 90 Days
             </h3>
             <p className="text-xs text-[#72767d]">
-              Darker colors indicate more focus time
+              Brighter colors indicate more focus time
             </p>
           </div>
           <div className="flex items-center gap-2">
