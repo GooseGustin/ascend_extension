@@ -140,11 +140,23 @@ export class QuestService {
 
     // --- Step 4.1: Trigger Re-validation Hook ---
     if (triggersRevalidation) {
+      console.log(`[QuestService] 🔄 Quest update triggers revalidation: ${questId}`);
+      console.log(`[QuestService] Reason: difficulty=${isDifficultyBeingModified}, subtasks changed=${updates.subtasks && (updates.subtasks.length !== quest.subtasks.length)}, time changed=${updates.timeEstimateHours !== undefined && updates.timeEstimateHours !== quest.timeEstimateHours}`);
+
       // Set status to queued (optimistically)
       updatedQuest.validationStatus = 'queued';
       // Commit the status change and queue the GM operation
-      await this.saveQuest(updatedQuest); 
+      await this.saveQuest(updatedQuest);
+
+      console.log(`[QuestService] 🎯 QUEUEING VALIDATION (UPDATE) for quest ${questId}`);
       await this.gmService.queueValidation(userId, questId);
+      console.log(`[QuestService] ✅ Validation queued successfully (UPDATE)`);
+
+      // Verify queue
+      const db = await import('../db/indexed-db').then(m => m.getDB());
+      const queueContents = await db.getPendingSyncOps(10);
+      const gmOps = queueContents.filter(op => op.collection === 'gm_validation');
+      console.log(`[QuestService] 🔍 Queue verification (UPDATE): ${gmOps.length} GM validations queued`);
     }
     
     return updatedQuest;
@@ -484,9 +496,15 @@ export class QuestService {
     // NEW: Trigger GM Validation Queue for new quests (unless it's a Trivial TodoQuest)
     console.log(`[QuestService] Quest type check: isTodoQuest=${isTodoQuest}, type=${questData.type}`);
     if (!isTodoQuest) {
-      console.log(`[QuestService] Queueing validation for quest ${questId}`);
+      console.log(`[QuestService] 🎯 QUEUEING VALIDATION for quest ${questId}`);
       await this.gmService.queueValidation(userId, questId);
-      console.log(`[QuestService] Validation queued successfully`);
+      console.log(`[QuestService] ✅ Validation queued successfully - should appear in next GM queue check`);
+
+      // Immediately check queue to verify
+      const db = await import('../db/indexed-db').then(m => m.getDB());
+      const queueContents = await db.getPendingSyncOps(10);
+      const gmOps = queueContents.filter(op => op.collection === 'gm_validation');
+      console.log(`[QuestService] 🔍 Queue verification: ${gmOps.length} GM validations queued`);
     } else {
       console.log(`[QuestService] Skipping validation for TodoQuest`);
     }

@@ -148,8 +148,13 @@ export function ByQuestView({ userId }: ByQuestViewProps) {
       {/* Quest Details */}
       <div className="space-y-4">
         {questData.map((quest) => {
-          const timePercent = ((quest.totalTime / totalTime) * 100).toFixed(1);
-          const avgSessionTime = Math.round(quest.totalTime / quest.sessions);
+          // Handle division by zero for percentage and average calculations
+          const timePercent = totalTime > 0
+            ? ((quest.totalTime / totalTime) * 100).toFixed(1)
+            : "0.0";
+          const avgSessionTime = quest.sessions > 0
+            ? Math.round(quest.totalTime / quest.sessions)
+            : 0;
 
           return (
             <div key={quest.quest} className="bg-[#2f3136] rounded-lg p-6">

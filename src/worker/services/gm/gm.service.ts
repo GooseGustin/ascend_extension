@@ -125,6 +125,13 @@ export class GMService {
     const metrics: PerformanceMetrics =
       await this.analyticsService.generateAgentState(userId);
 
+    // 2. Get user settings for GM tone
+    const settingsService = await import('../settings.service').then(m => m.getSettingsService());
+    const userSettings = await settingsService.getUserSettings(userId);
+    const gmTone = userSettings.ai.tone;
+
+    console.log('[GM Service] User GM tone:', gmTone);
+
     // Construct the context expected by RemoteAPI.validateQuest(quest, userContext)
     // Remove calculatedAt from metrics before sending to backend
     const { calculatedAt, ...minimalMetrics } = metrics;
@@ -134,6 +141,7 @@ export class GMService {
     const userContext: GMValidationContext = {
       userId: userId,
       metrics: minimalMetrics,
+      gmTone: gmTone,
     };
 
     // 2. Call Remote API
@@ -152,6 +160,9 @@ export class GMService {
       console.log('[GM Service] Validation successful, updating quest...');
 
       // Update quest difficulty fields
+      const oldDifficulty = quest.difficulty.userAssigned;
+      const oldXP = quest.difficulty.xpPerPomodoro;
+
       quest.difficulty.gmValidated = validationResult.suggestedDifficulty;
       quest.difficulty.isLocked = true;
       quest.difficulty.validatedAt = new Date().toISOString();
@@ -171,14 +182,28 @@ export class GMService {
         validatedAt: quest.difficulty.validatedAt,
       } as GMFeedback;
 
-      console.log('[GM Service] Quest updated with validation:', {
+      console.log('[GM Service] ✅ Quest updated with GM validation:', {
+        questId: quest.questId,
+        questTitle: quest.title,
+        userAssigned: oldDifficulty,
         gmValidated: quest.difficulty.gmValidated,
-        xpPerPomodoro: quest.difficulty.xpPerPomodoro,
+        oldXP: oldXP,
+        newXP: quest.difficulty.xpPerPomodoro,
+        confidence: quest.gmFeedback.confidence,
+        isLocked: quest.difficulty.isLocked,
         validationStatus: quest.validationStatus
       });
 
       await this.db.quests.put(quest);
-      console.log('[GM Service] Quest saved to database successfully');
+      console.log('[GM Service] ✅ Quest saved to database successfully');
+
+      // Verify the save
+      const verifyQuest = await this.db.quests.get(quest.questId);
+      console.log('[GM Service] 🔍 Verification - Quest in DB:', {
+        gmValidated: verifyQuest?.difficulty.gmValidated,
+        isLocked: verifyQuest?.difficulty.isLocked,
+        xpPerPomodoro: verifyQuest?.difficulty.xpPerPomodoro
+      });
     } else {
       // Treat remote failure (not just error) as a failure status
       console.error('[GM Service] Validation failed, status:', validationResult.status);
@@ -256,17 +281,19 @@ export class GMService {
    * Tries remote validation first, falls back to local reasoning if remote fails.
    */
   async processPendingQueue(): Promise<void> {
-    // console.log("[GMService] processPendingQueue() called - ENTRY POINT");
+    console.log("[GMService] processPendingQueue() called - ENTRY POINT");
 
     try {
-      // console.log("[GMService] Fetching pending sync operations...");
+      console.log("[GMService] Fetching pending sync operations...");
       const pendingOps: SyncOperation[] = await this.db.getPendingSyncOps(10);
-      // console.log(`[GMService] Found ${pendingOps.length} total pending operations`);
+      console.log(`[GMService] Found ${pendingOps.length} total pending operations:`,
+        pendingOps.map(op => ({ collection: op.collection, operation: op.operation, documentId: op.documentId }))
+      );
 
       const gmOps = pendingOps.filter(
         (op) => op.collection === "gm_validation" && op.operation === "validate"
       );
-      // console.log(`[GMService] Filtered to ${gmOps.length} GM validation operations`);
+      console.log(`[GMService] Filtered to ${gmOps.length} GM validation operations`);
 
       if (gmOps.length === 0) {
         console.log("GMService: No pending validation requests in queue.");
@@ -434,9 +461,13 @@ export class GMService {
         (quest.gmFeedback.validatedAt || "") > recentValidationThreshold
       ) {
         // Use the quest title in the summary
+        // Only show confidence if it's a valid number
+        const confidenceSuffix = quest.difficulty.confidence != null
+          ? ` Confidence: ${(quest.difficulty.confidence * 100).toFixed(0)}%.`
+          : ".";
         const summaryText = `GM updated '${quest.title}' to ${
           quest.difficulty.gmValidated
-        }. Confidence: ${(quest.difficulty.confidence! * 100).toFixed(0)}%.`;
+        }${confidenceSuffix}`;
         suggestions.push({
           id: `gm_summary_${quest.questId}`,
           text: summaryText,

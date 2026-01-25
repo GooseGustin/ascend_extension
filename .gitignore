@@ -22,3 +22,5 @@ fresh-ascend-firefox-extension.zip
 resources/* 
 test/*
 .claude
+debug-queue.js
+test-backend-connection.html

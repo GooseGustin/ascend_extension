@@ -54,7 +54,14 @@ export interface UserSettings {
       weeklyAnalysis: boolean;
     };
   };
-  
+
+  // GM Validation Quota
+  gmValidationQuota: {
+    dailyLimit: number;              // Default: 10 successful AI validations per day
+    successfulValidationsToday: number;  // Count of AI validations that succeeded
+    resetTimestamp: string;           // ISO8601 - when quota resets (midnight UTC)
+  };
+
   // Data & Storage
   storage: {
     cloudSync: boolean;
@@ -116,6 +123,11 @@ export const DEFAULT_USER_SETTINGS: Omit<UserSettings, 'userId'> = {
       reschedules: true,
       weeklyAnalysis: false,
     },
+  },
+  gmValidationQuota: {
+    dailyLimit: 10,
+    successfulValidationsToday: 0,
+    resetTimestamp: new Date().toISOString(),
   },
   storage: {
     cloudSync: false,

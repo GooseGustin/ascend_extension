@@ -28,8 +28,16 @@ export default async function startWorkerLoop() {
 
     // DIAGNOSTIC: Check sync queue contents
     const db = getDB();
+
+    // Check raw queue first
+    const allQueueItems = await db.syncQueue.toArray();
+    console.log(`[DIAGNOSTIC] Raw syncQueue has ${allQueueItems.length} total items`);
+
+    const gmItems = allQueueItems.filter(item => item.collection === 'gm_validation');
+    console.log(`[DIAGNOSTIC] GM validation items in raw queue: ${gmItems.length}`);
+
     const queueContents = await db.getPendingSyncOps(100);
-    console.log(`[DIAGNOSTIC] Sync queue has ${queueContents.length} items:`,
+    console.log(`[DIAGNOSTIC] getPendingSyncOps returned ${queueContents.length} items:`,
         queueContents.map(op => ({
             collection: op.collection,
             operation: op.operation,

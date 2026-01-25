@@ -201,10 +201,13 @@ export function ProgressHeatmap({ userId }: ProgressHeatmapProps) {
           <div>
             <div className="text-xs text-[#72767d] mb-1">Avg Per Day</div>
             <div className="text-2xl text-[#00b0f4]">
-              {Math.floor(
-                heatmapData.reduce((sum, d) => sum + d.duration, 0) /
-                  heatmapData.filter((d) => d.duration > 0).length
-              )}{" "}
+              {(() => {
+                const activeDays = heatmapData.filter((d) => d.duration > 0);
+                if (activeDays.length === 0) return 0;
+                return Math.floor(
+                  heatmapData.reduce((sum, d) => sum + d.duration, 0) / activeDays.length
+                );
+              })()}{" "}
               min
             </div>
           </div>

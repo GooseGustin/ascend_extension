@@ -12,6 +12,7 @@ export interface SyncOperation {
   userId: string;
   timestamp: number;
   priority: number; // 1-10 (10 = highest)
-  retries: number;
+  retryCount: number;           // Renamed from 'retries' for clarity
+  nextRetryTime: number | null; // Unix ms - when eligible for next retry
   error: string | null;
 }

@@ -15,19 +15,18 @@ export function SessionQualityCard({ userId }: SessionQualityCardProps) {
     { label: 'Overtime', count: 0, color: '#00b0f4' },
   ]);
 
-  useEffect(
-    (userId: string) => {
-      const load = async (userId) => {
+  useEffect(() => {
+      const load = async () => {
         const service = new AnalyticsService();
         const data = await service.getSessionQualityBreakdown(userId);
         setSessionData([
-        { label: 'Completed', count: data.completed, color: '#57F287' },
-        { label: 'Interrupted', count: data.interrupted, color: '#faa61a' },
-        { label: 'Early Stops', count: data.earlyStopped, color: '#ED4245' },
-        { label: 'Overtime', count: data.overtime, color: '#00b0f4' },
-      ]);
+          { label: 'Completed', count: data.completed, color: '#57F287' },
+          { label: 'Interrupted', count: data.interrupted, color: '#faa61a' },
+          { label: 'Early Stops', count: data.earlyStopped, color: '#ED4245' },
+          { label: 'Overtime', count: data.overtime, color: '#00b0f4' },
+        ]);
       };
-      if (userId) load(userId);
+      if (userId) load();
     },
     [userId]
   );
@@ -40,7 +39,8 @@ export function SessionQualityCard({ userId }: SessionQualityCardProps) {
       
       <div className="space-y-4">
         {sessionData.map((item) => {
-          const percentage = (item.count / total) * 100;
+          // Handle division by zero when no sessions exist
+          const percentage = total > 0 ? (item.count / total) * 100 : 0;
           
           return (
             <div key={item.label}>
