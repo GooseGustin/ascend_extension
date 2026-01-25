@@ -25,14 +25,125 @@ export class TaskService {
     const quests = await this.db.getActiveQuests(userId);
     console.log("In task service. User active quests", quests);
 
+    // Process repeating quests (regenerate subtasks if needed, filter by schedule)
+    const processedQuests = await this.processRepeatingQuests(quests);
+
     // Apply smart sorting
-    const sorted = sortQuestsByPriority(quests);
+    const sorted = sortQuestsByPriority(processedQuests);
 
     // Apply user's custom order if exists
     const customOrdered = await this.applyCustomOrder(userId, sorted as Quest[]);
     console.log("leaving get today's tasks", sorted, customOrdered);
 
     return customOrdered;
+  }
+
+  /**
+   * Process repeating quests - regenerate subtasks at cycle boundaries and filter by schedule
+   */
+  private async processRepeatingQuests(quests: Quest[]): Promise<Quest[]> {
+    const now = new Date();
+    const today = now.toISOString().split("T")[0];
+    const dayOfWeek = now.getDay(); // 0=Sunday, 1=Monday, ..., 6=Saturday
+
+    const visibleQuests: Quest[] = [];
+
+    for (const quest of quests) {
+      // For progressive quests, always show them
+      if (quest.behavior === "progressive") {
+        visibleQuests.push(quest);
+        continue;
+      }
+
+      // For repeating quests, check schedule
+      if (quest.behavior === "repeating") {
+        const { frequency } = quest.schedule;
+
+        // Check if quest should be visible today
+        let shouldShow = false;
+
+        if (frequency === "Daily") {
+          shouldShow = true; // Always show daily quests
+        } else if (frequency === "Weekly") {
+          // Show only on specified weekdays
+          const customDays = quest.schedule.customDays || [];
+          shouldShow = customDays.includes(dayOfWeek);
+        }
+
+        if (!shouldShow) {
+          continue; // Skip this quest for today
+        }
+
+        // Quest is visible today - check if we need to regenerate subtasks
+        const shouldRegenerate = this.shouldRegenerateSubtasks(quest, today);
+
+        if (shouldRegenerate) {
+          console.log(`[TaskService] Regenerating subtasks for repeating quest: ${quest.questId}`);
+
+          // Store completed subtasks in progress history before regenerating
+          const completedCount = quest.subtasks.filter(st => st.isComplete).length;
+          if (completedCount > 0) {
+            const historyEntry = quest.progressHistory.find(h => h.date === today);
+            if (historyEntry) {
+              historyEntry.completions += completedCount;
+            } else {
+              quest.progressHistory.push({
+                date: today,
+                completions: completedCount,
+                expEarned: 0, // XP is tracked separately via sessions
+                timeSpentMin: 0,
+                isMilestone: false,
+                sessionsCompleted: 0,
+              });
+            }
+          }
+
+          // Reset all subtasks to incomplete
+          quest.subtasks.forEach(subtask => {
+            subtask.isComplete = false;
+            subtask.completedAt = null;
+          });
+
+          // Save updated quest
+          await this.db.quests.put(quest);
+
+          // Queue for sync
+          await this.db.queueSync({
+            operation: "update",
+            collection: "quests",
+            documentId: quest.questId,
+            data: quest,
+            priority: 7,
+            retries: 0,
+            error: null,
+          });
+        }
+
+        visibleQuests.push(quest);
+      }
+    }
+
+    return visibleQuests;
+  }
+
+  /**
+   * Determine if subtasks should be regenerated for a repeating quest
+   */
+  private shouldRegenerateSubtasks(quest: Quest, today: string): boolean {
+    // Check if we've already regenerated today
+    const lastRegenDate = quest.progressHistory
+      .filter(h => h.completions > 0)
+      .map(h => h.date)
+      .sort()
+      .pop();
+
+    if (lastRegenDate === today) {
+      // Already regenerated today, don't regenerate again
+      return false;
+    }
+
+    // If any subtasks are complete, we haven't regenerated yet for this cycle
+    return quest.subtasks.some(st => st.isComplete);
   }
 
   /**
@@ -215,7 +326,7 @@ export class TaskService {
     subtask.isComplete = !subtask.isComplete;
     subtask.completedAt = subtask.isComplete ? new Date().toISOString() : null;
 
-    await this.db.quests.update(questId, quest);
+    await this.db.quests.put(quest);
 
     await this.db.queueSync({
       operation: "update",

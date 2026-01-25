@@ -78,11 +78,12 @@ export function XPLogsView({ userId }: XPLogsViewProps) {
 
       const total = enrichedLogs.reduce((sum, log) => sum + log.xp, 0);
       setTotalXP(total);
-      setAvgXPPerDay(Math.round(total / Object.keys(dailyTotals).length));
+      const daysCount = Object.keys(dailyTotals).length;
+      setAvgXPPerDay(daysCount > 0 ? Math.round(total / daysCount) : 0);
     }
 
     loadXPData();
-  }, []);
+  }, [userId]);
 
   return (
     <div className="p-6">

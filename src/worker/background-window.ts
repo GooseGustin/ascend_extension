@@ -32,7 +32,7 @@ async function getStoredWindow() {
 
 // Listen for clicks on the extension's action button
 
-chrome.action.onClicked.addListener(async () => {
+chrome.action?.onClicked.addListener(async () => {
   console.log("Ascend extension icon clicked"); // Check if window already exists
 
   const existingWindow = await getStoredWindow();
@@ -84,7 +84,7 @@ chrome.action.onClicked.addListener(async () => {
 
 // Clean up when window closes
 
-chrome.windows.onRemoved.addListener(async (removedWindowId) => {
+chrome.windows?.onRemoved.addListener(async (removedWindowId) => {
   console.log("Window removed:", removedWindowId);
 
   const storedWindow = await getStoredWindow();

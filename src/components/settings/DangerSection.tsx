@@ -85,9 +85,9 @@ export function DangerSection({ settings }: DangerSectionProps) {
                       <li>All progress statistics</li>
                       <li>All streaks and achievements</li>
                     </ul>
-                    <p className="mt-3 font-semibold">
-                      This action cannot be undone. Are you absolutely sure?
-                    </p>
+                    <div className="mt-3 font-semibold">
+                      This action cannot be undone. Are you absolutely sure?   
+                    </div>
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>

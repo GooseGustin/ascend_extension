@@ -3,78 +3,95 @@ import { Pause, Play, Square, Zap } from 'lucide-react';
 import { Button } from './ui/button';
 import type { FocusSession, Task } from '../App';
 import { SessionService } from '../worker';
+import type { Quest } from '../worker/models/Quest';
 
 interface FocusSessionModalProps {
   session: FocusSession;
-  onEnd: () => void;
+  sessionId: string;  // Add sessionId from parent
+  onEnd: (sessionId: string, actualMinutes: number, notes?: string) => void;
   tasks: Task[];
   sessionService: SessionService;
+  userId: string;
+  quest: Quest;
 }
 
-type SessionMode = 'pomodoro' | 'deep_focus' | 'break' | 'break_ended';
+type SessionMode = 'pomodoro' | 'deep_focus' | 'break' | 'session_complete';
 
 export function FocusSessionModal({
   session,
+  sessionId,
   onEnd,
   tasks,
   sessionService,
+  userId,
+  quest,
 }: FocusSessionModalProps) {
   const [timeRemaining, setTimeRemaining] = useState(session.duration);
   const [isPaused, setIsPaused] = useState(false);
-  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  const [currentSessionId, setCurrentSessionId] = useState<string>(sessionId);  // Use sessionId from parent
   const [sessionMode, setSessionMode] = useState<SessionMode>('pomodoro');
   const [deepFocusElapsed, setDeepFocusElapsed] = useState(0);
+  const [deepFocusMaxSeconds, setDeepFocusMaxSeconds] = useState(7200); // Default 2 hours, will load from settings
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Start session when modal opens
+  // Time-based tracking (instead of tick-based) to persist across window minimize
+  const sessionStartTimeRef = useRef<number>(Date.now());
+  const pausedAtRef = useRef<number | null>(null);
+  const totalPausedTimeRef = useRef<number>(0);
+  const initialDurationRef = useRef<number>(session.duration);
+
+  // Load settings when modal opens
   useEffect(() => {
-    const startSession = async () => {
+    const loadSettings = async () => {
       try {
-        const newSession = await sessionService.createSession(
-          'test-user-001',
-          'quest-001',
-          tasks.find((t) => t.title === session.subtaskName)?.id || null,
-          25,
-          'pomodoro'
-        );
-        setCurrentSessionId(newSession.sessionId);
+        // Load user settings for deep focus max duration
+        const settingsService = await import('../worker').then(m => m.getSettingsService());
+        const userSettings = await settingsService.getUserSettings(userId);
+        const deepFocusMaxMin = userSettings.productivity.deepFocus.maxDurationMin;
+        setDeepFocusMaxSeconds(deepFocusMaxMin * 60); // Convert min to sec
+
+        // Initialize timer start time
+        sessionStartTimeRef.current = Date.now();
+        totalPausedTimeRef.current = 0;
+
+        console.log('[FocusSessionModal] Session started with ID:', sessionId);
       } catch (error) {
-        console.error('Failed to start session:', error);
+        console.error('Failed to load settings:', error);
       }
     };
 
-    startSession();
+    loadSettings();
 
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, []);
 
-  // Timer logic
+  // Timer logic - TIME-BASED instead of tick-based (persists across window minimize)
   useEffect(() => {
     if (isPaused || !currentSessionId) return;
 
     intervalRef.current = setInterval(() => {
+      const now = Date.now();
+      const elapsedSinceStart = Math.floor((now - sessionStartTimeRef.current - totalPausedTimeRef.current) / 1000);
+
       if (sessionMode === 'pomodoro' || sessionMode === 'break') {
-        // Countdown timer
-        setTimeRemaining((prev) => {
-          if (prev <= 1) {
-            handleTimerComplete();
-            return 0;
-          }
-          return prev - 1;
-        });
+        // Countdown timer - calculate based on elapsed time
+        const newTimeRemaining = Math.max(0, initialDurationRef.current - elapsedSinceStart);
+        setTimeRemaining(newTimeRemaining);
+
+        if (newTimeRemaining <= 0) {
+          handleTimerComplete();
+        }
       } else if (sessionMode === 'deep_focus') {
-        // Up-counter
-        setDeepFocusElapsed((prev) => {
-          const newElapsed = prev + 1;
-          // Auto-stop at 2 hours (7200 seconds)
-          if (newElapsed >= 7200) {
-            handleDeepFocusCapReached();
-            return 7200;
-          }
-          return newElapsed;
-        });
+        // Up-counter - based on elapsed time
+        const newElapsed = elapsedSinceStart;
+        setDeepFocusElapsed(newElapsed);
+
+        // Auto-stop at max duration (from settings)
+        if (newElapsed >= deepFocusMaxSeconds) {
+          handleDeepFocusCapReached();
+        }
       }
     }, 1000);
 
@@ -93,37 +110,17 @@ export function FocusSessionModal({
 
   const handlePomodoroComplete = async () => {
     if (!currentSessionId) return;
-    try {
-      const actualMinutes = Math.ceil((session.duration - timeRemaining) / 60);
-      const result = await sessionService.completeSession(
-        currentSessionId,
-        actualMinutes,
-        'Pomodoro completed'
-      );
 
-      console.log(`+${result.xpAwarded} XP earned! Quality: ${result.qualityScore}`);
-      if (result.levelUp && typeof result.levelUp === 'object') {
-        console.log(`Level Up! Now level ${result.levelUp.newLevel}`);
-      }
-
-      // Auto-start break if enabled
-      if (result.shouldStartBreak) {
-        // setCurrentSessionId(breakSession.sessionId);
-        setSessionMode('break');
-        setTimeRemaining((result.breakDurationMin || 5) * 60);
-        setIsPaused(false);
-      } else {
-        onEnd();
-      }
-    } catch (error) {
-      console.error('Failed to complete pomodoro:', error);
-      onEnd();
-    }
+    // When timer reaches 0, switch to completion state
+    setSessionMode('session_complete');
+    setTimeRemaining(0);
+    setIsPaused(true);
+    console.log('Pomodoro timer complete - waiting for user action');
   };
 
   const handleBreakComplete = async () => {
-    // Set to break_ended mode - keep modal open and wait for user action
-    setSessionMode('break_ended');
+    // Set to session_complete mode - keep modal open and wait for user action
+    setSessionMode('session_complete');
     setTimeRemaining(0);
     setIsPaused(true); // Stop the timer
     console.log('Break complete! Waiting for user to start new session or close.');
@@ -131,22 +128,44 @@ export function FocusSessionModal({
 
   const handleStartNewSession = async () => {
     try {
-      // Create a new pomodoro session
+      // Complete the current session
+      const actualMinutes = Math.ceil(session.duration / 60); // Full duration
+      const notes = 'Session completed';
+
+      console.log('[FocusSessionModal] Completing current session...');
+      const result = await sessionService.completeSession(
+        currentSessionId,
+        actualMinutes,
+        notes
+      );
+      console.log(`[FocusSessionModal] ✅ Session completed! +${result.xpAwarded} XP`);
+
+      // Create a new session for the same quest/subtask
+      console.log('[FocusSessionModal] Creating new session...');
+      const subtaskId = tasks.find((t) => t.title === session.subtaskName)?.id || null;
       const newSession = await sessionService.createSession(
-        'test-user-001',
-        'quest-001',
-        tasks.find((t) => t.title === session.subtaskName)?.id || null,
-        25,
+        userId,
+        quest.questId,
+        subtaskId,
+        quest.schedule.pomodoroDurationMin,
         'pomodoro'
       );
+      console.log('[FocusSessionModal] ✅ New session created:', newSession.sessionId);
 
       // Reset state for new session
       setCurrentSessionId(newSession.sessionId);
       setSessionMode('pomodoro');
-      setTimeRemaining(25 * 60); // 25 minutes in seconds
+      const sessionDuration = quest.schedule.pomodoroDurationMin * 60;
+      setTimeRemaining(sessionDuration);
+
+      // Reset timer tracking
+      sessionStartTimeRef.current = Date.now();
+      totalPausedTimeRef.current = 0;
+      initialDurationRef.current = sessionDuration;
+
       setIsPaused(false);
 
-      console.log('New pomodoro session started!');
+      console.log('[FocusSessionModal] ✅ New pomodoro session started!');
     } catch (error) {
       console.error('Failed to start new session:', error);
     }
@@ -161,6 +180,7 @@ export function FocusSessionModal({
     if (!currentSessionId) return;
     try {
       await sessionService.pauseSession(currentSessionId);
+      pausedAtRef.current = Date.now();
       setIsPaused(true);
     } catch (error) {
       console.error('Failed to pause session:', error);
@@ -171,6 +191,14 @@ export function FocusSessionModal({
     if (!currentSessionId) return;
     try {
       await sessionService.resumeSession(currentSessionId);
+
+      // Track paused duration
+      if (pausedAtRef.current !== null) {
+        const pauseDuration = Date.now() - pausedAtRef.current;
+        totalPausedTimeRef.current += pauseDuration;
+        pausedAtRef.current = null;
+      }
+
       setIsPaused(false);
     } catch (error) {
       console.error('Failed to resume session:', error);
@@ -184,6 +212,11 @@ export function FocusSessionModal({
       setCurrentSessionId(deepSession.sessionId);
       setSessionMode('deep_focus');
       setDeepFocusElapsed(deepSession.deepFocusElapsedSec || 0);
+
+      // Reset timer tracking for deep focus mode
+      sessionStartTimeRef.current = Date.now();
+      totalPausedTimeRef.current = 0;
+
       setIsPaused(false);
     } catch (error) {
       console.error('Failed to switch to deep focus:', error);
@@ -194,27 +227,24 @@ export function FocusSessionModal({
     if (!currentSessionId) return;
     try {
       let actualMinutes = 0;
-      
+
       if (sessionMode === 'deep_focus') {
         actualMinutes = Math.ceil(deepFocusElapsed / 60);
       } else {
         actualMinutes = Math.ceil((session.duration - timeRemaining) / 60);
       }
 
-      const result = await sessionService.completeSession(
-        currentSessionId,
-        actualMinutes,
-        sessionMode === 'deep_focus' ? 'Deep focus session completed' : 'Session ended early'
-      );
+      const notes = sessionMode === 'deep_focus'
+        ? 'Deep focus session completed'
+        : 'Session ended early';
 
-      console.log(`+${result.xpAwarded} XP earned!`);
-      if (result.levelUp && typeof result.levelUp === 'object') {
-        console.log(`Level Up! Now level ${result.levelUp.newLevel}`);
-      }
+      console.log('[FocusSessionModal] Calling onEnd with sessionId:', currentSessionId);
+
+      // Call parent to handle session completion - PASS SESSION ID
+      onEnd(currentSessionId, actualMinutes, notes);
     } catch (error) {
       console.error('Failed to end session:', error);
-    } finally {
-      onEnd();
+      onEnd(currentSessionId, 0, 'Error ending session');
     }
   };
 
@@ -237,13 +267,13 @@ export function FocusSessionModal({
 
   const getProgress = () => {
     if (sessionMode === 'deep_focus') {
-      return (deepFocusElapsed / 7200) * 100; // Progress toward 2-hour cap
+      return (deepFocusElapsed / deepFocusMaxSeconds) * 100; // Progress toward max cap (from settings)
     }
     return ((session.duration - timeRemaining) / session.duration) * 100;
   };
 
   const getModeLabel = () => {
-    if (sessionMode === 'break_ended') return 'Break Complete!';
+    if (sessionMode === 'session_complete') return 'Session Complete!';
     if (sessionMode === 'break') return 'Break Time';
     if (sessionMode === 'deep_focus') return 'Deep Focus';
     return 'Focus Time';
@@ -317,7 +347,7 @@ export function FocusSessionModal({
                 </div>
                 {sessionMode === 'deep_focus' && (
                   <div className="text-xs text-[#72767d] mt-1">
-                    Cap: {formatTime(7200)}
+                    Cap: {formatTime(deepFocusMaxSeconds)}
                   </div>
                 )}
               </div>
@@ -327,8 +357,8 @@ export function FocusSessionModal({
 
         {/* Control Buttons */}
         <div className="flex justify-center gap-4 mb-8">
-          {sessionMode === 'break_ended' ? (
-            // Show Start and Close buttons when break is complete
+          {sessionMode === 'session_complete' ? (
+            // Show Start and Close buttons when session is complete
             <>
               <Button
                 onClick={handleStartNewSession}
@@ -338,9 +368,9 @@ export function FocusSessionModal({
                 Start New Session
               </Button>
               <Button
-                onClick={onEnd}
-                variant="outline"
-                className="bg-transparent border-[#b9bbbe] text-[#b9bbbe] hover:bg-[#b9bbbe] hover:text-black px-8"
+                onClick={handleEndSession}
+                // variant="outline"
+                className="bg-transparent py-2 border-[#b9bbbe] text-[#b9bbbe] hover:bg-[#b9bbbe] hover:text-black px-8"
               >
                 Close
               </Button>
@@ -351,7 +381,7 @@ export function FocusSessionModal({
               {/* Pause/Resume */}
               <Button
                 onClick={isPaused ? handleResume : handlePause}
-                disabled={sessionMode === 'deep_focus' && deepFocusElapsed >= 7200}
+                disabled={sessionMode === 'deep_focus' && deepFocusElapsed >= deepFocusMaxSeconds}
                 className="bg-[#5865F2] hover:bg-[#4752C4] text-white px-6"
               >
                 {isPaused ? (

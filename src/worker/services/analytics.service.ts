@@ -7,6 +7,7 @@ import { getDB } from "../db/indexed-db";
 import type { Session } from "../models/Session";
 import type { PerformanceMetrics } from "../models/AgentState";
 import type { Quest } from "../models/Quest";
+import { currentLevelFromExp } from "../utils/level-and-xp-converters";
 
 export interface HeatmapDay {
   date: string;
@@ -153,6 +154,7 @@ export class AnalyticsService {
     status: "Rising" | "Stable" | "Erratic" | "Crashing";
     daysActive: number;
     totalDays: number;
+    sparklineData: number[];
   }> {
     const endDate = new Date().toISOString().split("T")[0];
     const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000)
@@ -171,6 +173,16 @@ export class AnalyticsService {
         .filter((s) => s.status === "completed" && s.actualDurationMin >= 10)
         .map((s) => s.startTime.split("T")[0])
     );
+
+    // Generate sparkline data (1 for active day, 0 for inactive)
+    const sparklineData: number[] = [];
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      const dateStr = d.toISOString().split("T")[0];
+      sparklineData.push(activeDays.has(dateStr) ? 1 : 0);
+    }
 
     const daysActive = activeDays.size;
     const userProfile = await this.db.users.get(userId);
@@ -199,6 +211,7 @@ export class AnalyticsService {
       status,
       daysActive,
       totalDays: days,
+      sparklineData,
     };
   }
 
@@ -312,7 +325,7 @@ export class AnalyticsService {
       let key: string;
 
       if (groupBy === "day") {
-        key = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][date.getDay()];
+        key = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][date.getDay()];
       } else {
         // Week number
         const weekNum =
@@ -434,7 +447,7 @@ export class AnalyticsService {
 
     sessions.forEach((session) => {
       const date = new Date(session.startTime);
-      const dayKey = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][
+      const dayKey = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][
         date.getDay()
       ];
 
@@ -509,15 +522,22 @@ export class AnalyticsService {
       0
     );
 
+    // Calculate actual current level from total XP (not stored value)
+    const currentLevelActual = currentLevelFromExp(userProfile.experiencePoints);
+
+    // Calculate level at start of this month
+    const xpAtMonthStart = userProfile.experiencePoints - xpThisMonth;
+    const levelAtMonthStart = currentLevelFromExp(xpAtMonthStart);
+
     return {
-      currentLevel: userProfile.totalLevel,
+      currentLevel: currentLevelActual,
       totalXP: userProfile.experiencePoints,
       xpThisMonth,
       xpRisePercent:
         xpLastMonth > 0
           ? Math.round(((xpThisMonth - xpLastMonth) / xpLastMonth) * 100)
           : 0,
-      levelRise: 0, // Calculate based on level tracking
+      levelRise: currentLevelActual - levelAtMonthStart,
       sessionsThisMonth: thisMonthSessions.filter(
         (s) => s.status === "completed"
       ).length,
@@ -666,6 +686,101 @@ export class AnalyticsService {
       .filter((q) => q.issues.length > 0)
       .sort((a, b) => a.velocity - b.velocity)
       .slice(0, limit);
+  }
+
+  /**
+   * Update user streak based on session completion
+   * Called after completing a session
+   */
+  async updateStreak(userId: string): Promise<{
+    currentStreak: number;
+    longestStreak: number;
+    streakBroken: boolean;
+  }> {
+    const userProfile = await this.db.users.get(userId);
+    if (!userProfile) throw new Error("User not found");
+
+    const today = new Date().toISOString().split("T")[0];
+    const lastActivityDate = userProfile.streakData.lastActivityDate;
+
+    // If last activity was today, no need to update
+    if (lastActivityDate === today) {
+      return {
+        currentStreak: userProfile.streakData.currentStreak,
+        longestStreak: userProfile.streakData.longestStreak,
+        streakBroken: false,
+      };
+    }
+
+    // Calculate days since last activity
+    const lastDate = lastActivityDate ? new Date(lastActivityDate) : null;
+    const todayDate = new Date(today);
+
+    let streakBroken = false;
+
+    if (!lastDate) {
+      // First activity ever
+      userProfile.streakData.currentStreak = 1;
+      userProfile.streakData.streakStartDate = today;
+    } else {
+      const daysDiff = Math.floor(
+        (todayDate.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24)
+      );
+
+      if (daysDiff === 1) {
+        // Consecutive day - increment streak
+        userProfile.streakData.currentStreak += 1;
+      } else if (daysDiff > 1) {
+        // Streak broken - reset to 1
+        streakBroken = true;
+        userProfile.streakData.currentStreak = 1;
+        userProfile.streakData.streakStartDate = today;
+      }
+      // If daysDiff === 0, it means same day (already handled above)
+    }
+
+    // Update longest streak if current exceeds it
+    if (userProfile.streakData.currentStreak > userProfile.streakData.longestStreak) {
+      userProfile.streakData.longestStreak = userProfile.streakData.currentStreak;
+    }
+
+    // Update last activity date
+    userProfile.streakData.lastActivityDate = today;
+
+    // Save to database
+    await this.db.users.put(userProfile);
+
+    // Queue for sync
+    await this.db.queueSync({
+      operation: "update",
+      collection: "users",
+      documentId: userId,
+      data: userProfile,
+      priority: 8,
+      retries: 0,
+      error: null,
+    });
+
+    return {
+      currentStreak: userProfile.streakData.currentStreak,
+      longestStreak: userProfile.streakData.longestStreak,
+      streakBroken,
+    };
+  }
+
+  /**
+   * Check if streak is at risk (no activity today)
+   * Used for notifications
+   */
+  async isStreakAtRisk(userId: string): Promise<boolean> {
+    const userProfile = await this.db.users.get(userId);
+    if (!userProfile) return false;
+
+    const today = new Date().toISOString().split("T")[0];
+    const lastActivityDate = userProfile.streakData.lastActivityDate;
+
+    // Streak is at risk if last activity wasn't today
+    return lastActivityDate !== today;
   }
 
   /**

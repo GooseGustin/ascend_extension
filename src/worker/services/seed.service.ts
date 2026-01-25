@@ -58,7 +58,7 @@ export class SeedService {
       const user = await this.createTestUser();
       
       // Create test quests
-      await this.createTestQuests(user.userId);
+      // await this.createTestQuests(user.userId);
       
       // Mark as seeded
       localStorage.setItem(this.SEED_FLAG_KEY, 'true');
@@ -78,15 +78,16 @@ export class SeedService {
     const user: UserProfile = {
       userId: this.TEST_USER_ID,
       username: 'TestWarrior',
-      totalLevel: 12,
-      experiencePoints: 5420,
+      totalLevel: 0, // 12,
+      experiencePoints: 0, // 5420,
       isPublic: true,
-      joinDate: new Date(Date.now() - 30 * 86400000).toISOString(), // 30 days ago
+      joinDate: new Date().toISOString(), // new Date(Date.now() - 30 * 86400000).toISOString(), // 30 days ago
       specializationTrack: 'Architect',
-      grade: 'Silver II',
-      rankPoints: 1250,
+      grade: 'Bronze',
+      rankPoints: 0, // 1250,
       
-      inventory: [
+      inventory: [],
+       /*[
         {
           itemId: 'artifact-001',
           name: 'Ring of Consistent Focus',
@@ -111,23 +112,23 @@ export class SeedService {
           isEquipped: false,
           acquiredAt: new Date(Date.now() - 7 * 86400000).toISOString()
         }
-      ],
+      ],*/
       
       equippedArtifacts: {
         weapon: null,
         armor: null,
-        accessory: 'artifact-001'
+        accessory: null // 'artifact-001'
       },
       
       activeBuffs: [
-        {
-          buffId: 'buff-streak-7',
-          name: '7-Day Streak',
-          source: 'streak',
-          effect: { xpBonus: 0.05 },
-          multiplier: 1.05,
-          expiresAt: null
-        }
+        // {
+        //   buffId: 'buff-streak-7',
+        //   name: '7-Day Streak',
+        //   source: 'streak',
+        //   effect: { xpBonus: 0.05 },
+        //   multiplier: 1.05,
+        //   expiresAt: null
+        // }
       ],
       
       activeDebuffs: [],
@@ -139,14 +140,14 @@ export class SeedService {
       },
       
       streakData: {
-        currentStreak: 7,
-        longestStreak: 14,
+        currentStreak: 0, // 7,
+        longestStreak: 0, // 14,
         lastActivityDate: new Date().toISOString().split('T')[0],
-        streakStartDate: new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0]
+        streakStartDate: new Date().toISOString().split('T')[0], // new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0]
       },
       
-      consistencyScore: 78,
-      achievements: ['first_quest', 'week_streak', 'level_10']
+      consistencyScore: 0, // 78,
+      achievements: [] // 'first_quest', 'week_streak', 'level_10']
     };
 
     await this.db.users.add(user);
@@ -170,6 +171,7 @@ export class SeedService {
         isPublic: true,
         tags: ['react', 'frontend', 'learning'],
         hidden: false,
+        behavior: 'progressive', 
         priority: 'A',
         color: QUEST_COLORS[Math.floor(Math.random() * QUEST_COLORS.length)],
         
@@ -274,6 +276,7 @@ export class SeedService {
         isPublic: false,
         tags: ['project', 'dashboard', 'analytics'],
         hidden: false,
+        behavior: 'progressive',
         priority: 'A',
         color: QUEST_COLORS[Math.floor(Math.random() * QUEST_COLORS.length)],
         
@@ -376,6 +379,7 @@ export class SeedService {
         type: 'TodoQuest',
         isDungeon: false,
         isPublic: false,
+        behavior: 'progressive',
         tags: ['admin', 'quick-tasks'],
         hidden: false,
         priority: 'C',
@@ -463,6 +467,7 @@ export class SeedService {
         type: 'Quest',
         isDungeon: false,
         isPublic: true,
+        behavior: 'progressive',
         tags: ['typescript', 'learning'],
         hidden: false,
         priority: 'B',

@@ -53,7 +53,7 @@ export function WorkDistributionChart({
       };
       if (userId) load(userId);
     },
-    [userId]
+    [userId, timeView]
   );
 
   console.log('[WorkDistributionChart], weeklydata', data); 

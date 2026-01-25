@@ -11,6 +11,7 @@ export function ConsistencyScoreCard({ userId }: ConsistencyScoreCardProps) {
     status: "Stable" as "Rising" | "Stable" | "Erratic" | "Crashing",
     daysActive: 0,
     totalDays: 14,
+    sparklineData: [] as number[],
   });
 
   const statusColors = {
@@ -20,21 +21,16 @@ export function ConsistencyScoreCard({ userId }: ConsistencyScoreCardProps) {
     Crashing: "#ED4245",
   };
 
-  // Mock sparkline - keep as is for now (could be enhanced with real data)
-  const sparklineData = [1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1];
   const maxHeight = 40;
 
-  useEffect(
-    (userId: string) => {
-      const load = async (userId) => {
-        const service = new AnalyticsService();
-        const res = await service.getConsistencyScore(userId);
-        setConsistencyData(res);
-      };
-      if (userId) load(userId);
-    },
-    [userId]
-  );
+  useEffect(() => {
+    const load = async () => {
+      const service = new AnalyticsService();
+      const res = await service.getConsistencyScore(userId);
+      setConsistencyData(res);
+    };
+    if (userId) load();
+  }, [userId]);
 
   return (
     <div className="bg-[#2f3136] rounded-lg p-6">
@@ -100,7 +96,7 @@ export function ConsistencyScoreCard({ userId }: ConsistencyScoreCardProps) {
               Daily Work Presence
             </div>
             <div className="flex items-end gap-1">
-              {sparklineData.map((value, index) => (
+              {consistencyData.sparklineData.map((value, index) => (
                 <div
                   key={index}
                   className="flex-1 rounded-sm transition-all"

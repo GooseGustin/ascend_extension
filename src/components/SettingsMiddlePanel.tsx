@@ -25,11 +25,11 @@ export function SettingsMiddlePanel({
   const [searchQuery, setSearchQuery] = useState('');
 
   const settingsSections = [
-    { id: 'account' as SettingsSection, icon: User, label: 'Account' },
+    // { id: 'account' as SettingsSection, icon: User, label: 'Account' },
     { id: 'notifications' as SettingsSection, icon: Bell, label: 'Notifications' },
-    { id: 'appearance' as SettingsSection, icon: Palette, label: 'Appearance' },
+    // { id: 'appearance' as SettingsSection, icon: Palette, label: 'Appearance' },
     { id: 'productivity' as SettingsSection, icon: Clock, label: 'Productivity' },
-    { id: 'ai' as SettingsSection, icon: Brain, label: 'Grandmaster AI' },
+    // { id: 'ai' as SettingsSection, icon: Brain, label: 'Grandmaster AI' },
     { id: 'data' as SettingsSection, icon: Database, label: 'Data & Storage' },
     { id: 'extension' as SettingsSection, icon: Puzzle, label: 'Extension' },
     { id: 'about' as SettingsSection, icon: Info, label: 'About' },

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { X, Plus } from "lucide-react";
+import { X, Plus, Zap } from "lucide-react";
 import { Quest } from "../worker/models/Quest";
 
 interface QuestEditFormProps {
@@ -26,8 +26,8 @@ export function QuestEditForm({
   const [pomodoroBreak, setPomodoroBreak] = useState(
     quest.schedule.breakDurationMin
   );
-  const [schedule, setSchedule] = useState<"daily" | "weekly" | "custom">(
-    (quest.schedule.frequency.toLowerCase() as "daily" | "weekly" | "custom") ||
+  const [schedule, setSchedule] = useState<"daily" | "custom">(
+    (quest.schedule.frequency.toLowerCase() as "daily" | "custom") ||
       "daily"
   );
   const [customDays, setCustomDays] = useState<number[]>(
@@ -67,14 +67,16 @@ export function QuestEditForm({
     setTags(tags.filter((t) => t !== tag));
   };
 
-  const handleAddSubtask = () => {
-    setSubtasks([...subtasks, { title: "", estimatedPomodoros: 1 }]);
-  };
+  // const handleAddSubtask = () => {
+  //   setSubtasks([...subtasks, { title: "", estimatedPomodoros: 1 }]);
+  // };
 
   const handleRemoveSubtask = (index: number) => {
     setSubtasks(subtasks.filter((_, i) => i !== index));
   };
-
+  const handleAddSubtask = () => {
+    setSubtasks([{ title: "", estimatedPomodoros: 1 }, ...subtasks]);
+  };
   const handleSubtaskChange = (
     index: number,
     field: "title" | "estimatedPomodoros",
@@ -97,33 +99,43 @@ export function QuestEditForm({
         dueDate: dueDate || null,
         tags,
         schedule: {
-          frequency:
-            schedule === "daily"
-              ? "Daily"
-              : schedule === "weekly"
-                ? "Weekly"
-                : "Custom",
+          frequency: schedule === "daily" ? "Daily" : "Custom",
           customDays: schedule === "custom" ? customDays : undefined,
           pomodoroDurationMin: pomodoroDuration,
           breakDurationMin: pomodoroBreak,
           targetCompletionsPerCycle:
-            schedule === "daily"
-              ? 1
-              : schedule === "weekly"
-                ? 7
-                : customDays.length,
+            schedule === "daily" ? 1 : customDays.length,
           preferredTimeSlots: quest.schedule.preferredTimeSlots,
         },
+        // subtasks: subtasks
+        //   .filter((st) => st.title.trim())
+        //   .map((st, index) => ({
+        //     id: quest.subtasks[index]?.id || `subtask_${quest.questId}_${index}`,
+        //     title: st.title.trim(),
+        //     estimatePomodoros: st.estimatedPomodoros,
+        //     isComplete: quest.subtasks[index]?.isComplete || false,
+        //     completedAt: quest.subtasks[index]?.completedAt || null,
+        //     revisionCount: quest.subtasks[index]?.revisionCount || 0,
+        //   })),
         subtasks: subtasks
           .filter((st) => st.title.trim())
-          .map((st, index) => ({
-            id: quest.subtasks[index]?.id || `subtask_${quest.questId}_${index}`,
-            title: st.title.trim(),
-            estimatePomodoros: st.estimatedPomodoros,
-            isComplete: quest.subtasks[index]?.isComplete || false,
-            completedAt: quest.subtasks[index]?.completedAt || null,
-            revisionCount: quest.subtasks[index]?.revisionCount || 0,
-          })),
+          .map((st, index) => {
+            // Find matching subtask by title to preserve its ID and metadata
+            const existingSubtask = quest.subtasks.find(
+              (existing) => existing.title === st.title
+            );
+
+            return {
+              id:
+                existingSubtask?.id ||
+                `subtask_${quest.questId}_${Date.now()}_${index}`,
+              title: st.title.trim(),
+              estimatePomodoros: st.estimatedPomodoros,
+              isComplete: existingSubtask?.isComplete || false,
+              completedAt: existingSubtask?.completedAt || null,
+              revisionCount: existingSubtask?.revisionCount || 0,
+            };
+          }),
       };
 
       onSaveQuest(updatedData);
@@ -148,76 +160,90 @@ export function QuestEditForm({
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto p-6">
         <div className="max-w-3xl space-y-6">
-          {/* Title */}
+          {/* Title - Full Width with Card */}
           <div>
-            <label className="block text-sm text-[#b9bbbe] mb-2 font-medium">
-              Quest Title
-            </label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Enter quest title..."
-              className="w-full bg-[#2f3136] border border-[#202225] rounded px-3 py-2 text-white placeholder:text-[#72767d] focus:outline-none focus:border-[#5865F2]"
-            />
-          </div>
-
-          {/* Description */}
-          <div>
-            <label className="block text-sm text-[#b9bbbe] mb-2 font-medium">
-              Description
-            </label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Describe your quest..."
-              rows={4}
-              className="w-full bg-[#2f3136] border border-[#202225] rounded px-3 py-2 text-white placeholder:text-[#72767d] focus:outline-none focus:border-[#5865F2] resize-none"
-            />
-          </div>
-
-          {/* Priority & Due Date */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm text-[#b9bbbe] mb-2 font-medium">
-                Priority
-              </label>
-              <div className="flex gap-2">
-                {(["A", "B", "C"] as const).map((p) => (
-                  <button
-                    key={p}
-                    onClick={() => setPriority(p)}
-                    className="flex-1 px-3 py-2 rounded text-sm font-medium transition-colors"
-                    style={
-                      priority === p
-                        ? { backgroundColor: priorityColors[p], color: "white" }
-                        : {
-                            backgroundColor: "#2f3136",
-                            color: "#b9bbbe",
-                          }
-                    }
-                  >
-                    {p}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm text-[#b9bbbe] mb-2 font-medium">
-                Due Date
+            <div className="bg-[#2f3136] p-4 rounded-lg border border-[#202225] hover:border-[#5865F2] transition-colors">
+              <label className="block text-sm text-[#b9bbbe] mb-2 flex items-center gap-2">
+                <Zap className="w-4 h-4 text-[#faa61a]" />
+                Quest Title *
               </label>
               <input
-                type="date"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-                className="w-full bg-[#2f3136] border border-[#202225] rounded px-3 py-2 text-white focus:outline-none focus:border-[#5865F2]"
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Enter an epic quest title..."
+                className="w-full bg-[#202225] text-white px-4 py-3 rounded border-2 border-transparent focus:border-[#5865F2] outline-none transition-colors text-lg"
               />
             </div>
           </div>
 
-          {/* Tags */}
+          {/* Description - Full Width with Card */}
           <div>
+            <div className="bg-[#2f3136] p-4 rounded-lg border border-[#202225] hover:border-[#5865F2] transition-colors">
+              <label className="block text-sm text-[#b9bbbe] mb-2">
+                Description
+              </label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Describe where your epic journey will lead..."
+                rows={4}
+                className="w-full bg-[#202225] text-white px-4 py-3 rounded border-2 border-transparent focus:border-[#5865F2] outline-none transition-colors resize-none"
+              />
+            </div>
+          </div>
+
+          {/* Priority & Due Date */}
+          <div className="bg-[#2f3136] p-4 rounded-lg border border-[#202225]">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm text-[#b9bbbe] mb-3">
+                  Priority
+                </label>
+                <div className="flex gap-2">
+                  {(["A", "B", "C"] as const).map((p) => (
+                    <button
+                      key={p}
+                      onClick={() => setPriority(p)}
+                      className={`
+                        flex-1 px-3 py-2 rounded-lg border-2 text-sm transition-all
+                        ${
+                          priority === p
+                            ? "border-[#5865F2] bg-[#5865F2]/20 text-white"
+                            : "border-[#202225] bg-[#202225] hover:border-[#404449]"
+                        }
+                      `}
+                    >
+                      <span
+                        className={
+                          priority === p
+                            ? "text-white font-medium"
+                            : "text-[#b9bbbe]"
+                        }
+                      >
+                        {p}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm text-[#b9bbbe] mb-3">
+                  Due Date
+                </label>
+                <input
+                  type="date"
+                  value={dueDate}
+                  onChange={(e) => setDueDate(e.target.value)}
+                  className="w-full bg-[#202225] text-white px-3 py-2 rounded border-2 border-transparent focus:border-[#5865F2] outline-none transition-colors"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Tags */}
+          <div className="bg-[#2f3136] p-4 rounded-lg border border-[#202225]">
             <label className="block text-sm text-[#b9bbbe] mb-2 font-medium">
               Tags
             </label>
@@ -249,7 +275,7 @@ export function QuestEditForm({
                   }
                 }}
                 placeholder="Add a tag..."
-                className="flex-1 bg-[#2f3136] border border-[#202225] rounded px-3 py-2 text-white placeholder:text-[#72767d] focus:outline-none focus:border-[#5865F2]"
+                className="flex-1 bg-[#202225] border-2 border-transparent rounded px-3 py-2 text-white placeholder:text-[#72767d] focus:outline-none focus:border-[#5865F2]"
               />
               <button
                 onClick={handleAddTag}
@@ -261,82 +287,89 @@ export function QuestEditForm({
           </div>
 
           {/* Schedule */}
-          <div>
-            <label className="block text-sm text-[#b9bbbe] mb-2 font-medium">
+          <div className="bg-[#2f3136] p-4 rounded-lg border border-[#202225]">
+            <label className="block text-sm text-[#b9bbbe] mb-3 font-medium">
               Schedule
             </label>
             <div className="flex gap-2 mb-4">
-              {(["daily", "weekly", "custom"] as const).map((s) => (
+              {(["daily", "custom"] as const).map((s) => (
                 <button
                   key={s}
                   onClick={() => setSchedule(s)}
-                  className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
+                  className={`flex-1 px-4 py-2 rounded text-sm font-medium transition-colors capitalize ${
                     schedule === s
                       ? "bg-[#5865F2] text-white"
-                      : "bg-[#2f3136] text-[#b9bbbe] hover:bg-[#4f545c]"
+                      : "bg-[#202225] text-[#b9bbbe] hover:bg-[#404449]"
                   }`}
                 >
-                  {s.charAt(0).toUpperCase() + s.slice(1)}
+                  {s}
                 </button>
               ))}
             </div>
 
             {schedule === "custom" && (
-              <div className="grid grid-cols-7 gap-2 p-3 bg-[#2f3136] rounded">
-                {daysOfWeek.map((day, index) => (
-                  <button
-                    key={index}
-                    onClick={() => toggleCustomDay(index)}
-                    className={`px-2 py-1 rounded text-sm font-medium transition-colors ${
-                      customDays.includes(index)
-                        ? "bg-[#5865F2] text-white"
-                        : "bg-[#36393f] text-[#b9bbbe] hover:bg-[#4f545c]"
-                    }`}
-                  >
-                    {day}
-                  </button>
-                ))}
+              <div className="mt-3">
+                <label className="block text-xs text-[#72767d] mb-2">
+                  Select Days
+                </label>
+                <div className="flex gap-1">
+                  {daysOfWeek.map((day, index) => (
+                    <button
+                      key={index}
+                      onClick={() => toggleCustomDay(index)}
+                      className={`flex-1 px-2 py-2 rounded text-xs font-medium transition-colors ${
+                        customDays.includes(index)
+                          ? "bg-[#5865F2] text-white"
+                          : "bg-[#202225] text-[#72767d] hover:bg-[#404449]"
+                      }`}
+                    >
+                      {day}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
           </div>
 
           {/* Pomodoro Settings */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm text-[#b9bbbe] mb-2 font-medium">
-                Pomodoro Duration (min)
-              </label>
-              <input
-                type="number"
-                min="1"
-                value={pomodoroDuration}
-                onChange={(e) => setPomodoroDuration(parseInt(e.target.value))}
-                className="w-full bg-[#2f3136] border border-[#202225] rounded px-3 py-2 text-white focus:outline-none focus:border-[#5865F2]"
-              />
-            </div>
+          <div className="bg-[#2f3136] p-4 rounded-lg border border-[#202225]">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm text-[#b9bbbe] mb-2 font-medium">
+                  Pomodoro Duration (min)
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={pomodoroDuration}
+                  onChange={(e) => setPomodoroDuration(parseInt(e.target.value))}
+                  className="w-full bg-[#202225] text-white px-3 py-2 rounded border-2 border-transparent focus:border-[#5865F2] outline-none transition-colors"
+                />
+              </div>
 
-            <div>
-              <label className="block text-sm text-[#b9bbbe] mb-2 font-medium">
-                Break Duration (min)
-              </label>
-              <input
-                type="number"
-                min="1"
-                value={pomodoroBreak}
-                onChange={(e) => setPomodoroBreak(parseInt(e.target.value))}
-                className="w-full bg-[#2f3136] border border-[#202225] rounded px-3 py-2 text-white focus:outline-none focus:border-[#5865F2]"
-              />
+              <div>
+                <label className="block text-sm text-[#b9bbbe] mb-2 font-medium">
+                  Break Duration (min)
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={pomodoroBreak}
+                  onChange={(e) => setPomodoroBreak(parseInt(e.target.value))}
+                  className="w-full bg-[#202225] text-white px-3 py-2 rounded border-2 border-transparent focus:border-[#5865F2] outline-none transition-colors"
+                />
+              </div>
             </div>
           </div>
 
           {/* Public/Private Toggle */}
-          <div>
+          <div className="bg-[#2f3136] p-4 rounded-lg border border-[#202225]">
             <label className="flex items-center gap-3 cursor-pointer">
               <input
                 type="checkbox"
                 checked={isPublic}
                 onChange={(e) => setIsPublic(e.target.checked)}
-                className="w-4 h-4 bg-[#2f3136] border border-[#202225] rounded cursor-pointer"
+                className="w-4 h-4 bg-[#202225] border border-[#404449] rounded cursor-pointer"
               />
               <span className="text-sm text-[#b9bbbe] font-medium">
                 Make this quest public
@@ -345,26 +378,38 @@ export function QuestEditForm({
           </div>
 
           {/* Subtasks */}
-          <div>
+          <div className="bg-[#2f3136] p-4 rounded-lg border border-[#202225]">
             <div className="flex items-center justify-between mb-3">
-              <label className="text-sm text-[#b9bbbe] font-medium">
-                Subtasks
-              </label>
+              <div>
+                <label className="text-sm text-white flex items-center gap-2">
+                  <Zap className="w-4 h-4 text-[#faa61a]" />
+                  Subtasks
+                </label>
+                <p className="text-xs text-[#72767d] mt-1">
+                  Break down your quest into manageable tasks
+                </p>
+              </div>
               <button
                 onClick={handleAddSubtask}
-                className="flex items-center gap-1 text-sm text-[#5865F2] hover:text-[#4752C4] transition-colors font-medium"
+                className="text-sm text-[#5865F2] hover:text-[#4752C4] flex items-center gap-2 px-3 py-2 hover:bg-[#5865F2] hover:bg-opacity-10 rounded transition-all"
               >
                 <Plus className="w-4 h-4" />
                 Add Subtask
               </button>
             </div>
 
-            <div className="space-y-2 bg-[#2f3136] rounded p-3">
+            <div className="space-y-3">
               {subtasks.length === 0 ? (
-                <p className="text-sm text-[#72767d]">No subtasks yet</p>
+                <p className="text-sm text-[#72767d] text-center py-4">No subtasks yet</p>
               ) : (
                 subtasks.map((subtask, index) => (
-                  <div key={index} className="flex gap-2 items-center">
+                  <div
+                    key={index}
+                    className="flex gap-3 items-center bg-[#202225] p-4 rounded-lg border border-[#36393f] hover:border-[#5865F2] transition-colors group"
+                  >
+                    <div className="w-8 h-8 rounded-full bg-[#5865F2] bg-opacity-20 flex items-center justify-center text-[#5865F2] shrink-0">
+                      {index + 1}
+                    </div>
                     <input
                       type="text"
                       value={subtask.title}
@@ -372,26 +417,31 @@ export function QuestEditForm({
                         handleSubtaskChange(index, "title", e.target.value)
                       }
                       placeholder="Subtask title..."
-                      className="flex-1 bg-[#36393f] border border-[#202225] rounded px-3 py-2 text-white placeholder:text-[#72767d] focus:outline-none focus:border-[#5865F2] text-sm"
+                      className="flex-1 bg-transparent text-white px-0 py-0 border-0 outline-none placeholder:text-[#72767d]"
                     />
-                    <input
-                      type="number"
-                      min="1"
-                      value={subtask.estimatedPomodoros}
-                      onChange={(e) =>
-                        handleSubtaskChange(
-                          index,
-                          "estimatedPomodoros",
-                          parseInt(e.target.value)
-                        )
-                      }
-                      className="w-20 bg-[#36393f] border border-[#202225] rounded px-2 py-2 text-white focus:outline-none focus:border-[#5865F2] text-sm"
-                    />
+                    <div className="flex items-center gap-2 bg-[#2f3136] px-3 py-2 rounded">
+                      <input
+                        type="number"
+                        value={subtask.estimatedPomodoros}
+                        onChange={(e) =>
+                          handleSubtaskChange(
+                            index,
+                            "estimatedPomodoros",
+                            parseInt(e.target.value)
+                          )
+                        }
+                        min="1"
+                        max="10"
+                        className="w-12 bg-transparent text-white text-center border-0 outline-none"
+                        title="Estimated Pomodoros"
+                      />
+                      <span className="text-sm">🍅</span>
+                    </div>
                     <button
                       onClick={() => handleRemoveSubtask(index)}
-                      className="p-2 text-[#72767d] hover:text-[#ED4245] transition-colors hover:bg-[#36393f] rounded"
+                      className="text-[#72767d] hover:text-[#ED4245] transition-colors opacity-0 group-hover:opacity-100"
                     >
-                      <X className="w-4 h-4" />
+                      <X className="w-5 h-5" />
                     </button>
                   </div>
                 ))

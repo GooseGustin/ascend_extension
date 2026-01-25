@@ -42,8 +42,8 @@ export class IndexedDb extends Dexie {
 
   constructor() {
     super("AscendDB");
-    this.version(6).stores({
-      // BUMP VERSION
+    this.version(7).stores({
+      // v7: Added gmValidationQuota to UserSettings, renamed retries→retryCount and added nextRetryTime to SyncOperation
       users: "userId, username, totalLevel",
       quests:
         "questId, ownerId, type, isPublic, isCompleted, registeredAt, [ownerId+isCompleted]",
@@ -99,7 +99,7 @@ export class IndexedDb extends Dexie {
   }
 
   /**
-   * Get active quests for user
+   * Get active quests for user (excludes completed and hidden quests)
    */
   async getActiveQuests(userId: string): Promise<Quest[]> {
     console.log("In indexed-db, getActiveQuests", userId);
@@ -110,7 +110,7 @@ export class IndexedDb extends Dexie {
       // .equals([userId, 0] as any) // 0 = false
       .toArray();
     console.log("User, quests", userId, quests);
-    return quests.filter((q) => q.isCompleted === false);
+    return quests.filter((q) => q.isCompleted === false && q.hidden === false);
   }
 
   /**
@@ -210,7 +210,8 @@ export class IndexedDb extends Dexie {
       ...operation,
       id,
       timestamp: Date.now(),
-      retries: operation.retries || 0,
+      retryCount: operation.retryCount || 0,
+      nextRetryTime: operation.nextRetryTime || null,
       error: operation.error || null,
     } as SyncOperation;
 
@@ -221,13 +222,32 @@ export class IndexedDb extends Dexie {
 
   /**
    * Get pending sync operations sorted by priority
+   * Lower priority number = higher priority (e.g., 2 before 7)
    */
   async getPendingSyncOps(limit: number = 50): Promise<SyncOperation[]> {
-    return await this.syncQueue
-      .orderBy("[priority+timestamp]")
-      .reverse() // High priority first
-      .limit(limit)
-      .toArray();
+    // Get all items, sort manually (compound index might have issues)
+    const allItems = await this.syncQueue.toArray();
+
+    console.log(`[IndexedDB] getPendingSyncOps: Found ${allItems.length} total items in queue`);
+
+    // Sort by priority (ascending = lower number = higher priority), then timestamp
+    const sorted = allItems.sort((a, b) => {
+      if (a.priority !== b.priority) {
+        return a.priority - b.priority; // 2 (GM) comes before 7 (quests) or 10 (sessions)
+      }
+      return a.timestamp - b.timestamp; // Earlier timestamp first
+    });
+
+    const limited = sorted.slice(0, limit);
+
+    console.log(`[IndexedDB] getPendingSyncOps: Returning ${limited.length} items (sorted by priority)`);
+    console.log(`[IndexedDB] First 5 items:`, limited.slice(0, 5).map(item => ({
+      collection: item.collection,
+      priority: item.priority,
+      operation: item.operation
+    })));
+
+    return limited;
   }
 
   /**

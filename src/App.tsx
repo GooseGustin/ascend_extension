@@ -86,6 +86,7 @@ export default function App() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [quests, setQuests] = useState<Quest[]>([]);
   const [notifications, setNotifications] = useState<WorkerNotification[]>([]);
+  const [dataVersion, setDataVersion] = useState(0);
 
   // Services
   const authService = new AuthService();
@@ -353,20 +354,53 @@ export default function App() {
   //   }
   // };
 
-  const endFocusSession = async () => {
-    if (activeSessionId && userId) {
+  const endFocusSession = async (sessionId: string, actualMinutes: number, notes?: string) => {
+    console.log('[endFocusSession] Starting session completion:', {
+      sessionId,
+      activeSessionId,
+      userId,
+      actualMinutes,
+      notes
+    });
+
+    if (sessionId && userId) {
       try {
         // Complete the session in worker
-        await sessionService.completeSession(
-          activeSessionId,
-          25, // actual duration
-          undefined // no notes
+        console.log('[endFocusSession] Calling sessionService.completeSession...');
+        const result = await sessionService.completeSession(
+          sessionId,
+          actualMinutes,  // Use actual duration from modal
+          notes
         );
 
-        // Reload tasks to reflect XP changes
-        await loadTasks(userId);
+        console.log('[endFocusSession] ✅ Session completed!', {
+          xpAwarded: result.xpAwarded,
+          qualityScore: result.qualityScore,
+          levelUp: result.levelUp
+        });
+
+        console.log(`+${result.xpAwarded} XP earned!`);
+        if (result.levelUp && typeof result.levelUp === 'object') {
+          console.log(`Level Up! Quest → Level ${result.levelUp.newLevel}`);
+        }
+
+        // FULL REFRESH - reload all data including stats
+        console.log('[endFocusSession] Reloading all data...');
+        await loadAllData(userId);
+
+        // Verify user profile was updated
+        const verifyUser = await authService.getCurrentUser();
+        console.log('[endFocusSession] 🔍 User profile after reload:', {
+          userId: verifyUser?.userId,
+          xp: verifyUser?.experiencePoints,
+          level: verifyUser?.totalLevel
+        });
+
+        setDataVersion(v => v + 1);  // Trigger MainPanel stats refresh
+        console.log('[endFocusSession] ✅ Data reload complete, dataVersion incremented');
       } catch (error) {
-        console.error("Failed to end session:", error);
+        console.error("[endFocusSession] ❌ Failed to end session:", error);
+        console.error("[endFocusSession] Error stack:", error);
       }
     }
 
@@ -563,11 +597,44 @@ export default function App() {
     }
   };
 
+  const handleRefresh = async () => {
+    if (!userId) {
+      console.warn("[REFRESH] No userId found");
+      return;
+    }
+
+    try {
+      console.log("[REFRESH] Starting refresh for userId:", userId);
+
+      // Check user status in database
+      const currentUser = await authService.getCurrentUser();
+      if (!currentUser) {
+        console.error("[REFRESH] ❌ USER NOT FOUND IN DATABASE - userId:", userId);
+        console.log("[REFRESH] User may need to be recreated. Check database seeding.");
+        return;
+      }
+
+      console.log("[REFRESH] ✅ User found:", {
+        userId: currentUser.userId,
+        username: currentUser.username,
+        totalLevel: currentUser.totalLevel,
+        experiencePoints: currentUser.experiencePoints,
+        streakDays: currentUser.streakData.currentStreak
+      });
+
+      await loadAllData(userId);
+      setDataVersion(v => v + 1);  // Trigger MainPanel stats refresh
+      console.log("[REFRESH] ✅ Refresh completed successfully");
+    } catch (error) {
+      console.error("[REFRESH] ❌ Failed to refresh data:", error);
+    }
+  };
+
   const handleDeleteQuest = async (questId: string) => {
     if (!userId) return;
 
     try {
-      await questService.deleteQuest(questId);
+      await questService.deleteQuest(userId, questId);
 
       // Remove from state
       setWorkerQuests((prev) => prev.filter((q) => q.questId !== questId));
@@ -585,12 +652,12 @@ export default function App() {
     if (!userId) return;
 
     try {
-      await questService.archiveQuest(questId);
+      const updatedQuest = await questService.archiveQuest(userId, questId);
 
-      // Update state
+      // Update state with toggled hidden property
       setWorkerQuests((prev) =>
         prev.map((q) =>
-          q.questId === questId ? { ...q, hidden: true } : q
+          q.questId === questId ? updatedQuest : q
         )
       );
 
@@ -646,11 +713,14 @@ export default function App() {
         subtaskId = task.id;
       }
 
+      // Use quest's custom pomodoro duration (set during quest creation)
+      const pomodoroDuration = workerQuest.schedule.pomodoroDurationMin;
+
       const session = await sessionService.createSession(
         userId,
         workerQuest.questId,
         subtaskId,
-        25
+        pomodoroDuration
       );
 
       setActiveSessionId(session.sessionId);
@@ -659,19 +729,22 @@ export default function App() {
       const sessionData: FocusSession = {
         questTitle: questTitle || workerQuest.title,
         subtaskName: task.title,
-        duration: 25 * 60,
+        duration: pomodoroDuration * 60, // Convert min to sec
       };
 
       // Show modal immediately with the session data
       showModal(
         <FocusSessionModal
           session={sessionData}
-          onEnd={async () => {
-            await endFocusSession();
+          sessionId={session.sessionId}
+          onEnd={async (sessionId: string, actualMinutes: number, notes?: string) => {
+            await endFocusSession(sessionId, actualMinutes, notes);
             hideModal();
           }}
           tasks={tasks}
           sessionService={sessionService}
+          userId={userId}
+          quest={workerQuest}
         />
       );
     } catch (error) {
@@ -739,13 +812,15 @@ export default function App() {
           userId={userId}
           tasks={tasks}
           workerQuests={workerQuests}
-          selectedQuestId={selectedQuestId}
+          dataVersion={dataVersion}
+          // selectedQuestId={selectedQuestId}
           onToggleTask={toggleTaskComplete}
           onReorderTasks={reorderTasks}
           onStartFocus={startFocusWithModal}
           onFloatingPlusClick={handleFloatingPlusClick}
           onQuestSelect={handleQuestSelect}
           onAddSubtask={handleAddSubtask}
+          onRefresh={handleRefresh}
         />
       )}
       {activeNav === "settings" && (

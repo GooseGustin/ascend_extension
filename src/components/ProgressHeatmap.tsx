@@ -36,7 +36,7 @@ export function ProgressHeatmap({ userId }: ProgressHeatmapProps) {
     }
 
     loadHeatmap();
-  }, []);
+  }, [userId]);
 
   // Calculate intensity (0-4) based on duration
   const getIntensity = (duration: number) => {
@@ -111,7 +111,7 @@ export function ProgressHeatmap({ userId }: ProgressHeatmapProps) {
               Last 90 Days
             </h3>
             <p className="text-xs text-[#72767d]">
-              Darker colors indicate more focus time
+              Brighter colors indicate more focus time
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -201,10 +201,13 @@ export function ProgressHeatmap({ userId }: ProgressHeatmapProps) {
           <div>
             <div className="text-xs text-[#72767d] mb-1">Avg Per Day</div>
             <div className="text-2xl text-[#00b0f4]">
-              {Math.floor(
-                heatmapData.reduce((sum, d) => sum + d.duration, 0) /
-                  heatmapData.filter((d) => d.duration > 0).length
-              )}{" "}
+              {(() => {
+                const activeDays = heatmapData.filter((d) => d.duration > 0);
+                if (activeDays.length === 0) return 0;
+                return Math.floor(
+                  heatmapData.reduce((sum, d) => sum + d.duration, 0) / activeDays.length
+                );
+              })()}{" "}
               min
             </div>
           </div>

@@ -48,7 +48,7 @@ export class QuestService {
 
 
   /**
-   * Get all user's quests
+   * Get all user's quests (excludes hidden/archived quests)
    */
   async getUserQuests(userId: string): Promise<Quest[]> {
     const quests = await this.db.quests
@@ -56,7 +56,7 @@ export class QuestService {
       .equals(userId)
       .toArray();
     console.log("in quest service, leaving getuserquests", quests);
-    return quests;
+    return quests.filter(q => !q.hidden);
   }
 
   /**
@@ -140,11 +140,23 @@ export class QuestService {
 
     // --- Step 4.1: Trigger Re-validation Hook ---
     if (triggersRevalidation) {
+      console.log(`[QuestService] 🔄 Quest update triggers revalidation: ${questId}`);
+      console.log(`[QuestService] Reason: difficulty=${isDifficultyBeingModified}, subtasks changed=${updates.subtasks && (updates.subtasks.length !== quest.subtasks.length)}, time changed=${updates.timeEstimateHours !== undefined && updates.timeEstimateHours !== quest.timeEstimateHours}`);
+
       // Set status to queued (optimistically)
       updatedQuest.validationStatus = 'queued';
       // Commit the status change and queue the GM operation
-      await this.saveQuest(updatedQuest); 
+      await this.saveQuest(updatedQuest);
+
+      console.log(`[QuestService] 🎯 QUEUEING VALIDATION (UPDATE) for quest ${questId}`);
       await this.gmService.queueValidation(userId, questId);
+      console.log(`[QuestService] ✅ Validation queued successfully (UPDATE)`);
+
+      // Verify queue
+      const db = await import('../db/indexed-db').then(m => m.getDB());
+      const queueContents = await db.getPendingSyncOps(10);
+      const gmOps = queueContents.filter(op => op.collection === 'gm_validation');
+      console.log(`[QuestService] 🔍 Queue verification (UPDATE): ${gmOps.length} GM validations queued`);
     }
     
     return updatedQuest;
@@ -295,10 +307,11 @@ export class QuestService {
     difficulty: "Trivial" | "Easy" | "Medium" | "Hard" | "Epic";
     priority: "A" | "B" | "C";
     isPublic: boolean;
+    behavior: "repeating" | "progressive"; // Required: defines quest behavior mode
     dueDate?: string;
     tags: string[];
     schedule: {
-      frequency: "Daily" | "Weekly" | "Custom";
+      frequency: "Daily" | "Weekly";
       customDays?: number[];
       pomodoroDurationMin: number;
       breakDurationMin: number;
@@ -312,6 +325,11 @@ export class QuestService {
     timeEstimateHours?: number; // ADDED to questData interface for completeness
   }): Promise<Quest> {
     const userId = await this.authService.getCurrentUserId();
+
+    // Anti-abuse: Check Epic quest limits
+    if (questData.difficulty === "Epic") {
+      await this.checkEpicQuestLimits(userId);
+    }
 
     // Calculate XP per pomodoro based on difficulty
     const isTodoQuest = questData.type === "TodoQuest";
@@ -349,6 +367,37 @@ export class QuestService {
 
     console.log(`[QuestService] timeEstimateHours calculation: totalPomodoros=${totalPomodoros}, totalMinutes=${totalMinutes}, timeEstimateHours=${timeEstimateHours}`);
 
+    /*
+    XP to next level chart
+    Level | Total XP Required
+    0     | 0
+    1     | ~22
+    2     | ~49
+    3     | ~82
+    4     | ~123
+    5     | ~172
+    6     | ~232
+    7     | ~306
+    8     | ~395
+    9     | ~505
+    10    | ~639
+    11    | ~803
+    12    | ~1,002
+    13    | ~1,246
+    14    | ~1,544
+    15    | ~1,909
+    16    | ~2,353
+    17    | ~2,896
+    18    | ~3,560
+    19    | ~4,370
+    20    | ~5,360
+    21    | ~6,569
+    22    | ~8,045
+    23    | ~9,848
+    24    | ~12,051
+    25    | ~14,741
+    */
+
     // Create the quest object
     const quest: Quest = {
       questId,
@@ -361,6 +410,7 @@ export class QuestService {
       tags: questData.tags,
       hidden: false,
       priority: questData.priority,
+      behavior: questData.behavior, // Set behavioral mode
       color:
         this.QUEST_COLORS[Math.floor(Math.random() * this.QUEST_COLORS.length)],
       timeEstimateHours,
@@ -396,9 +446,9 @@ export class QuestService {
       activeBuffs: [],
 
       gamification: {
-        currentLevel: 1,
+        currentLevel: 0,
         currentExp: 0,
-        expToNextLevel: 500,
+        expToNextLevel: 22,
       },
 
       progressHistory: [],
@@ -446,9 +496,15 @@ export class QuestService {
     // NEW: Trigger GM Validation Queue for new quests (unless it's a Trivial TodoQuest)
     console.log(`[QuestService] Quest type check: isTodoQuest=${isTodoQuest}, type=${questData.type}`);
     if (!isTodoQuest) {
-      console.log(`[QuestService] Queueing validation for quest ${questId}`);
+      console.log(`[QuestService] 🎯 QUEUEING VALIDATION for quest ${questId}`);
       await this.gmService.queueValidation(userId, questId);
-      console.log(`[QuestService] Validation queued successfully`);
+      console.log(`[QuestService] ✅ Validation queued successfully - should appear in next GM queue check`);
+
+      // Immediately check queue to verify
+      const db = await import('../db/indexed-db').then(m => m.getDB());
+      const queueContents = await db.getPendingSyncOps(10);
+      const gmOps = queueContents.filter(op => op.collection === 'gm_validation');
+      console.log(`[QuestService] 🔍 Queue verification: ${gmOps.length} GM validations queued`);
     } else {
       console.log(`[QuestService] Skipping validation for TodoQuest`);
     }
@@ -462,11 +518,11 @@ export class QuestService {
    */
   private getXpForDifficulty(difficulty: string): number {
     const xpMap = {
-      Trivial: 50,
-      Easy: 100,
-      Medium: 200,
-      Hard: 300,
-      Epic: 500,
+      Trivial: 20,
+      Easy: 40, 
+      Medium: 80,
+      Hard: 150, 
+      Epic: 300, 
     };
     return xpMap[difficulty as keyof typeof xpMap] || 100;
   }
@@ -582,5 +638,134 @@ export class QuestService {
       retries: 0,
       error: null,
     });
+  }
+
+  /**
+   * Archive/unarchive a quest (toggle hidden property)
+   */
+  async archiveQuest(userId: string, questId: string): Promise<Quest> {
+    // Validate quest exists and user owns it
+    const quest = await this.db.quests.get(questId);
+    if (!quest) {
+      throw new Error("Quest not found");
+    }
+    if (quest.ownerId !== userId) {
+      throw new Error("Access denied");
+    }
+
+    // Toggle hidden property
+    const updatedQuest = {
+      ...quest,
+      hidden: !quest.hidden,
+      updatedAt: new Date().toISOString(),
+    };
+
+    // Update in database
+    await this.db.quests.put(updatedQuest);
+
+    // Queue sync operation
+    await this.db.queueSync({
+      operation: "update",
+      collection: "quests",
+      documentId: questId,
+      data: { hidden: updatedQuest.hidden },
+      priority: 7,
+      userId: quest.ownerId,
+      retries: 0,
+      error: null,
+    });
+
+    return updatedQuest;
+  }
+
+  /**
+   * Check Epic quest creation limits
+   * Anti-abuse: Max 3 active Epic quests, 1 hour cooldown between creations
+   */
+  private async checkEpicQuestLimits(userId: string): Promise<void> {
+    // Check active Epic quest count (max 3)
+    const activeEpicQuests = await this.db.quests
+      .where('ownerId')
+      .equals(userId)
+      .filter(q =>
+        q.difficulty.userAssigned === 'Epic' &&
+        !q.isCompleted
+      )
+      .toArray();
+
+    if (activeEpicQuests.length >= 3) {
+      throw new Error('EPIC_LIMIT_REACHED: You can only have 3 active Epic quests at a time. Complete or delete an existing Epic quest before creating a new one.');
+    }
+
+    // Check cooldown (1 hour between Epic quest creations)
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+
+    const recentEpicQuests = await this.db.quests
+      .where('ownerId')
+      .equals(userId)
+      .filter(q =>
+        q.difficulty.userAssigned === 'Epic' &&
+        q.createdAt >= oneHourAgo
+      )
+      .toArray();
+
+    if (recentEpicQuests.length > 0) {
+      const lastCreated = recentEpicQuests
+        .map(q => new Date(q.createdAt).getTime())
+        .sort((a, b) => b - a)[0];
+
+      const timeSinceLastEpic = Date.now() - lastCreated;
+      const minutesRemaining = Math.ceil((3600000 - timeSinceLastEpic) / 60000);
+
+      throw new Error(`EPIC_COOLDOWN: You can only create one Epic quest per hour. Please wait ${minutesRemaining} more minute(s).`);
+    }
+  }
+
+  /**
+   * Get Epic quest statistics for UI
+   */
+  async getEpicQuestStats(userId: string): Promise<{
+    activeCount: number;
+    maxCount: number;
+    canCreate: boolean;
+    cooldownMinutes: number;
+  }> {
+    const activeEpicQuests = await this.db.quests
+      .where('ownerId')
+      .equals(userId)
+      .filter(q =>
+        q.difficulty.userAssigned === 'Epic' &&
+        !q.isCompleted
+      )
+      .toArray();
+
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const recentEpicQuests = await this.db.quests
+      .where('ownerId')
+      .equals(userId)
+      .filter(q =>
+        q.difficulty.userAssigned === 'Epic' &&
+        q.createdAt >= oneHourAgo
+      )
+      .toArray();
+
+    let cooldownMinutes = 0;
+    if (recentEpicQuests.length > 0) {
+      const lastCreated = recentEpicQuests
+        .map(q => new Date(q.createdAt).getTime())
+        .sort((a, b) => b - a)[0];
+
+      const timeSinceLastEpic = Date.now() - lastCreated;
+      cooldownMinutes = Math.max(0, Math.ceil((3600000 - timeSinceLastEpic) / 60000));
+    }
+
+    const canCreate = activeEpicQuests.length < 3 && cooldownMinutes === 0;
+
+    return {
+      activeCount: activeEpicQuests.length,
+      maxCount: 3,
+      canCreate,
+      cooldownMinutes,
+    };
   }
 }

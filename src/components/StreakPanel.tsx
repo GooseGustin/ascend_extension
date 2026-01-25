@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Flame, TrendingUp } from 'lucide-react';
 import { AuthService } from '../worker/services/auth.service';
+import { AnalyticsService } from '../worker/services/analytics.service';
 
 export function StreakPanel() {
   const [streakData, setStreakData] = useState({
@@ -9,25 +10,58 @@ export function StreakPanel() {
     lastBroken: 'N/A'
   });
 
-  // Keep sparkline as mock for now
-  const streakHealth = [
-    1, 1, 1, 1, 1, 0, 1, 1, 1, 1,
-    1, 1, 0, 1, 1, 1, 1, 1, 1, 1,
-    1, 0, 1, 1, 1, 1, 1, 1, 1, 1,
-  ];
+  // Real activity sparkline data (last 30 days)
+  const [streakHealth, setStreakHealth] = useState<number[]>(Array(30).fill(0));
+
+  // MOCK DATA - Commented out, using real data now
+  // const streakHealth = [
+  //   1, 1, 1, 1, 1, 0, 1, 1, 1, 1,
+  //   1, 1, 0, 1, 1, 1, 1, 1, 1, 1,
+  //   1, 0, 1, 1, 1, 1, 1, 1, 1, 1,
+  // ];
 
   useEffect(() => {
     const load = async () => {
-        const session = new AuthService(); 
-        const user = await session.getCurrentUser(); 
-        if (user) {
+      const authService = new AuthService();
+      const analyticsService = new AnalyticsService();
+      const user = await authService.getCurrentUser();
+
+      if (user) {
         setStreakData({
           currentStreak: user.streakData.currentStreak,
           longestStreak: user.streakData.longestStreak,
           lastBroken: user.streakData.lastActivityDate || 'N/A'
         });
+
+        // Fetch real activity data for last 30 days
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+        const heatmapData = await analyticsService.getHeatmapData(
+          user.userId,
+          thirtyDaysAgo.toISOString().split('T')[0],
+          new Date().toISOString().split('T')[0]
+        );
+
+        // Convert heatmap data to sparkline format (1 = active, 0 = inactive)
+        // Get last 30 days and map to activity
+        const activityMap: Record<string, boolean> = {};
+        heatmapData.forEach((day: any) => {
+          activityMap[day.date] = day.count > 0;
+        });
+
+        // Build sparkline array for last 30 days
+        const sparkline: number[] = [];
+        for (let i = 29; i >= 0; i--) {
+          const date = new Date();
+          date.setDate(date.getDate() - i);
+          const dateStr = date.toISOString().split('T')[0];
+          sparkline.push(activityMap[dateStr] ? 1 : 0);
         }
-    }; 
+
+        setStreakHealth(sparkline);
+      }
+    };
 
     load();
   }, []);

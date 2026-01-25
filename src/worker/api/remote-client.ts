@@ -29,6 +29,7 @@ export interface MinimalAgentMetrics {
 export interface GMValidationContext {
   userId: string;
   metrics: MinimalAgentMetrics;
+  gmTone: 'mild' | 'standard' | 'tough';
 }
 
 /**
@@ -99,7 +100,8 @@ export class RemoteAPI {
         timeEstimateHours: quest.timeEstimateHours
       },
 
-      metrics: userContext.metrics
+      metrics: userContext.metrics,
+      gmTone: userContext.gmTone
     };
 
 

@@ -32,15 +32,17 @@ export function QuestsMiddlePanel({
   const [expandedSections, setExpandedSections] = useState<{
     myQuests: boolean;
     watching: boolean;
+    archived: boolean;
   }>({
     myQuests: true,
     watching: true,
+    archived: false,
   });
   const [searchQuery, setSearchQuery] = useState('');
   // const [questComments, setQuestComments] = useState<Record<string, GoalComment[]>>({});
   // const questService = new QuestService();
 
-  const toggleSection = (section: 'myQuests' | 'watching') => {
+  const toggleSection = (section: 'myQuests' | 'watching' | 'archived') => {
     setExpandedSections((prev) => ({
       ...prev,
       [section]: !prev[section],
@@ -59,8 +61,9 @@ export function QuestsMiddlePanel({
 //     }
 //   };
   // Filter quests based on watchers array (using worker Quest model)
-  const myQuests = quests.filter(q => q.ownerId); // Quests I own
-  const watchingQuests = quests.filter(q => q.watchers && q.watchers.length > 0);
+  const myQuests = quests.filter(q => q.ownerId && !q.hidden); // Quests I own (not hidden)
+  const archivedQuests = quests.filter(q => q.ownerId && q.hidden); // Archived quests
+  const watchingQuests = quests.filter(q => q.watchers && q.watchers.length > 0 && !q.hidden);
 
   // Categorize my quests
   const personalQuests = myQuests.filter(q => !q.isDungeon && (!q.members || q.members.length <= 1));
@@ -72,6 +75,9 @@ export function QuestsMiddlePanel({
     q.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
   const filteredWatching = watchingQuests.filter(q =>
+    q.title.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+  const filteredArchived = archivedQuests.filter(q =>
     q.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -260,6 +266,35 @@ export function QuestsMiddlePanel({
             <Compass className="w-4 h-4 text-[#00b0f4]" />
             <span className="text-sm text-[#00b0f4]">Discover Quests</span>
           </button>
+        </div>
+
+        {/* Archived Quests (Collapsible) */}
+        <div className="border-b border-[#202225]">
+          <button
+            onClick={() => toggleSection('archived')}
+            className="w-full px-3 py-2 flex items-center gap-2 hover:bg-[#34373c] transition-colors"
+          >
+            {expandedSections.archived ? (
+              <ChevronDown className="w-4 h-4 text-[#b9bbbe]" />
+            ) : (
+              <ChevronRight className="w-4 h-4 text-[#b9bbbe]" />
+            )}
+            <span className="text-xs uppercase tracking-wide text-[#b9bbbe]">Archived</span>
+            <span className="text-xs text-[#72767d] ml-auto">{filteredArchived.length}</span>
+          </button>
+
+          {expandedSections.archived && (
+            <div className="px-2 pb-2 space-y-1">
+              {filteredArchived.map(quest => (
+                <QuestItem key={quest.questId} quest={quest} />
+              ))}
+              {filteredArchived.length === 0 && (
+                <div className="px-2 py-3 text-xs text-[#72767d] text-center">
+                  No archived quests
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Notifications */}
