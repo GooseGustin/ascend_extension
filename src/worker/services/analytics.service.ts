@@ -589,8 +589,7 @@ export class AnalyticsService {
           questId: quest.questId,
           title: quest.title,
           icon: quest.type === "DungeonQuest" ? "⚔️" : "📋",
-          color:
-            quest.difficulty.userAssigned === "Hard" ? "#ED4245" : "#5865F2",
+          color: quest.color || "#5865F2",
           velocity: Math.round(velocity),
           avgVelocity,
           completionRate:
@@ -668,8 +667,7 @@ export class AnalyticsService {
           questId: quest.questId,
           title: quest.title,
           icon: quest.type === "DungeonQuest" ? "⚔️" : "📋",
-          color:
-            quest.difficulty.userAssigned === "Hard" ? "#ED4245" : "#5865F2",
+          color: quest.color || "#5865F2",
           velocity: Math.round(velocity),
           avgVelocity,
           issues,
@@ -923,8 +921,10 @@ export class AnalyticsService {
     
     // Factor 3: Overdue quests
     // NOTE: Assuming this.db.getActiveQuests(userId) exists in the IndexedDB wrapper
-    const quests = await this.db.getActiveQuests(userId); 
-    const overdueCount = quests.filter(q => 
+    const allQuests = await this.db.getActiveQuests(userId);
+    // Filter out AntiQuests from analytics
+    const quests = allQuests.filter(q => q.type !== 'AntiQuest');
+    const overdueCount = quests.filter(q =>
       q.dueDate && new Date(q.dueDate) < new Date()
     ).length;
     
@@ -950,8 +950,9 @@ export class AnalyticsService {
     
     // Fetch dependent data
     const profile = await this.db.users.get(userId);
-    // Use Quest[] type
-    const quests: Quest[] = await this.db.getActiveQuests(userId); // Active quests
+    // Use Quest[] type - filter out AntiQuests from analytics
+    const allActiveQuests: Quest[] = await this.db.getActiveQuests(userId);
+    const quests = allActiveQuests.filter(q => q.type !== 'AntiQuest');
     
     // Metrics from existing methods or direct calculation
     const sessionsToday = await this.getTodaySessions(userId);

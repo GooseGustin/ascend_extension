@@ -1,5 +1,5 @@
 import { Label } from '../ui/label';
-import { Switch } from '../ui/switch';
+import { ToggleSwitch } from '../ui/toggle-switch';
 import { Button } from '../ui/button';
 import { Separator } from '../ui/separator';
 import type { UserSettings } from '../../worker/models/UserSettings';
@@ -45,7 +45,7 @@ export function ExtensionSection({ settings, onUpdate }: ExtensionSectionProps) 
             Open Ascend when creating a new tab
           </p>
         </div>
-        <Switch
+        <ToggleSwitch
           checked={settings.extension.autoOpenNewTab}
           onCheckedChange={(checked) => handleToggle('autoOpenNewTab', checked)}
         />
@@ -60,7 +60,7 @@ export function ExtensionSection({ settings, onUpdate }: ExtensionSectionProps) 
             Show keyboard shortcuts on hover
           </p>
         </div>
-        <Switch
+        <ToggleSwitch
           checked={settings.extension.keyboardShortcuts}
           onCheckedChange={(checked) => handleToggle('keyboardShortcuts', checked)}
         />

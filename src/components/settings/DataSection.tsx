@@ -1,6 +1,6 @@
 import { Button } from '../ui/button';
 import { Label } from '../ui/label';
-import { Switch } from '../ui/switch';
+import { ToggleSwitch } from '../ui/toggle-switch';
 import { Separator } from '../ui/separator';
 import {
   AlertDialog,
@@ -207,9 +207,9 @@ export function DataSection({ settings, onUpdate }: DataSectionProps) {
               Automatically backup your data
             </p>
           </div>
-          <Switch
+          <ToggleSwitch
             checked={settings.storage.cloudSync}
-            onCheckedChange={handleCloudSyncToggle}
+            onCheckedChange={(checked) => handleCloudSyncToggle(checked)}
           />
         </div>
         {!settings.storage.cloudSync && (

@@ -64,8 +64,11 @@ export function WeakQuestsView({userId}: WeakQuestsViewProps) {
                 </div>
                 <div className="w-full h-2 bg-[#202225] rounded-full overflow-hidden">
                   <div
-                    className="h-full rounded-full bg-[#ED4245] transition-all"
-                    style={{ width: `${(quest.velocity / quest.avgVelocity) * 100}%` }}
+                    className="h-full rounded-full transition-all"
+                    style={{
+                      width: `${(quest.velocity / quest.avgVelocity) * 100}%`,
+                      backgroundColor: quest.color || '#ED4245'
+                    }}
                   />
                 </div>
               </div>

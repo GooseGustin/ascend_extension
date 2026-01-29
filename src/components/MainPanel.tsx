@@ -29,7 +29,7 @@ interface MainPanelProps {
   onStartFocus: (task: Task | Subtask, questTitle?: string) => void;
   onFloatingPlusClick: () => void;
   onQuestSelect?: (questId: string) => void;
-  onAddSubtask?: (questId: string, title: string) => void;
+  onAddSubtask?: (questId: string, title: string) => void | Promise<void>;
   onRefresh?: () => void;
 }
 
@@ -57,6 +57,29 @@ export function MainPanel({
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [selectedQuestId, setSelectedQuestId] = useState<string | null>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+
+  // Filter tasks to only show those from quests scheduled for today
+  const isQuestScheduledForToday = (quest: Quest): boolean => {
+    const today = new Date().getDay(); // 0 = Sunday, 6 = Saturday
+    const frequency = quest.schedule?.frequency?.toLowerCase();
+
+    if (frequency === 'daily') {
+      return true;
+    }
+
+    if (frequency === 'custom' && quest.schedule?.customDays) {
+      return quest.schedule.customDays.includes(today);
+    }
+
+    // Default to showing if no schedule defined
+    return true;
+  };
+
+  const scheduledQuestIds = new Set(
+    workerQuests.filter(isQuestScheduledForToday).map(q => q.questId)
+  );
+
+  const todaysTasks = tasks.filter(task => scheduledQuestIds.has(task.questId));
 
 
   useEffect(() => {
@@ -99,7 +122,7 @@ export function MainPanel({
   const handleAddSubtaskSubmit = async () => {
     if (!newSubtaskTitle.trim() || !selectedQuestId) return;
     try {
-      onAddSubtask?.(selectedQuestId, newSubtaskTitle.trim());
+      await onAddSubtask?.(selectedQuestId, newSubtaskTitle.trim());
       setNewSubtaskTitle("");
     } catch (error) {
       console.error("Failed to add subtask:", error);
@@ -297,7 +320,7 @@ export function MainPanel({
               Today's Tasks
             </h3>
             <TaskList
-              tasks={tasks}
+              tasks={todaysTasks}
               onToggleTask={onToggleTask}
               onReorderTasks={onReorderTasks}
               onStartFocus={onStartFocus}
@@ -322,7 +345,7 @@ export function MainPanel({
       <button
         onClick={() => {
           console.log('[MainPanel], clicked on floating action button')
-          const firstIncompleteTask = tasks.find((t) => !t.completed);
+          const firstIncompleteTask = todaysTasks.find((t) => !t.completed);
           if (firstIncompleteTask)
             onStartFocus(firstIncompleteTask, firstIncompleteTask.questTag);
         }}

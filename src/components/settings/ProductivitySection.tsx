@@ -1,6 +1,6 @@
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
-import { Switch } from '../ui/switch';
+import { ToggleSwitch } from '../ui/toggle-switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Separator } from '../ui/separator';
 import type { UserSettings } from '../../worker/models/UserSettings';
@@ -97,7 +97,7 @@ export function ProductivitySection({ settings, onUpdate }: ProductivitySectionP
                 Automatically start break after completing a pomodoro
               </p>
             </div>
-            <Switch
+            <ToggleSwitch
               checked={settings.productivity.pomodoro.autoStartBreak}
               onCheckedChange={(checked) =>
                 handlePomodoroChange('autoStartBreak', checked)
@@ -112,7 +112,7 @@ export function ProductivitySection({ settings, onUpdate }: ProductivitySectionP
                 Automatically start the next session
               </p>
             </div>
-            <Switch
+            <ToggleSwitch
               checked={settings.productivity.pomodoro.autoStartNext}
               onCheckedChange={(checked) =>
                 handlePomodoroChange('autoStartNext', checked)

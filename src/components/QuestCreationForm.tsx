@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Sword,
   Users,
@@ -69,6 +69,7 @@ export function QuestCreationForm({
     { title: string; estimatedPomodoros: number }[]
   >([{ title: "", estimatedPomodoros: 1 }]);
   const [icon, setIcon] = useState("⚔️");
+  const firstSubtaskInputRef = useRef<HTMLInputElement>(null);
 
   // Load user settings and apply defaults
   useEffect(() => {
@@ -183,6 +184,20 @@ export function QuestCreationForm({
 
   const handleAddSubtask = () => {
     setSubtasks([{ title: "", estimatedPomodoros: 1 }, ...subtasks]);
+    // Focus on the new input after React re-renders
+    setTimeout(() => {
+      firstSubtaskInputRef.current?.focus();
+    }, 0);
+  };
+
+  const handleSubtaskKeyDown = (e: React.KeyboardEvent, index: number) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      // Only add new subtask if current one has content
+      if (subtasks[index].title.trim()) {
+        handleAddSubtask();
+      }
+    }
   };
 
   const handleRemoveSubtask = (index: number) => {
@@ -692,10 +707,12 @@ export function QuestCreationForm({
                   </div>
                   <input
                     type="text"
+                    ref={index === 0 ? firstSubtaskInputRef : undefined}
                     value={subtask.title}
                     onChange={(e) =>
                       handleSubtaskChange(index, "title", e.target.value)
                     }
+                    onKeyDown={(e) => handleSubtaskKeyDown(e, index)}
                     placeholder="Subtask title..."
                     className="flex-1 bg-transparent text-white px-0 py-0 border-0 outline-none placeholder:text-[#72767d]"
                   />

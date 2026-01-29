@@ -1,5 +1,5 @@
 import { Label } from '../ui/label';
-import { Switch } from '../ui/switch';
+import { ToggleSwitch } from '../ui/toggle-switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Button } from '../ui/button';
 import { Separator } from '../ui/separator';
@@ -107,7 +107,7 @@ export function AISection({ settings, onUpdate }: AISectionProps) {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <Label className="text-[#dcddde]">Suggest Daily Plan</Label>
-            <Switch
+            <ToggleSwitch
               checked={settings.ai.suggestions.dailyPlan}
               onCheckedChange={(checked) =>
                 handleSuggestionToggle('dailyPlan', checked)
@@ -117,7 +117,7 @@ export function AISection({ settings, onUpdate }: AISectionProps) {
 
           <div className="flex items-center justify-between">
             <Label className="text-[#dcddde]">Suggest Quest Improvements</Label>
-            <Switch
+            <ToggleSwitch
               checked={settings.ai.suggestions.questImprovements}
               onCheckedChange={(checked) =>
                 handleSuggestionToggle('questImprovements', checked)
@@ -127,7 +127,7 @@ export function AISection({ settings, onUpdate }: AISectionProps) {
 
           <div className="flex items-center justify-between">
             <Label className="text-[#dcddde]">Suggest Reschedules</Label>
-            <Switch
+            <ToggleSwitch
               checked={settings.ai.suggestions.reschedules}
               onCheckedChange={(checked) =>
                 handleSuggestionToggle('reschedules', checked)
@@ -137,7 +137,7 @@ export function AISection({ settings, onUpdate }: AISectionProps) {
 
           <div className="flex items-center justify-between">
             <Label className="text-[#dcddde]">Analyze Progress Weekly</Label>
-            <Switch
+            <ToggleSwitch
               checked={settings.ai.suggestions.weeklyAnalysis}
               onCheckedChange={(checked) =>
                 handleSuggestionToggle('weeklyAnalysis', checked)

@@ -52,8 +52,7 @@ export function ByQuestView({ userId }: ByQuestViewProps) {
           return {
             quest: quest.title,
             icon: quest.type === "DungeonQuest" ? "⚔️" : "📋",
-            color:
-              quest.difficulty?.userAssigned === "Hard" ? "#ED4245" : "#5865F2",
+            color: quest.color || "#5865F2",
             totalTime,
             sessions: totalSessions,
             xpEarned: totalXP,

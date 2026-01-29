@@ -22,8 +22,11 @@ export class TaskService {
    */
   async getTodaysTasks(userId: string): Promise<Quest[]> {
     // Fetch all active quests
-    const quests = await this.db.getActiveQuests(userId);
-    console.log("In task service. User active quests", quests);
+    const allQuests = await this.db.getActiveQuests(userId);
+
+    // IMPORTANT: Filter out AntiQuests - they don't appear in Today's tasks
+    const quests = allQuests.filter(q => q.type !== 'AntiQuest');
+    console.log("In task service. User active quests (excluding AntiQuests)", quests);
 
     // Process repeating quests (regenerate subtasks if needed, filter by schedule)
     const processedQuests = await this.processRepeatingQuests(quests);
@@ -306,7 +309,7 @@ export class TaskService {
   // }
 
   /**
-   * Toggle subtask completion
+   * Toggle subtask completion and check if quest should be marked complete
    */
   async toggleSubtaskCompletion(
     userId: string,
@@ -318,13 +321,52 @@ export class TaskService {
       throw new Error("Quest not found or access denied");
     }
 
-    const subtask = quest.subtasks.find((st) => st.id === subtaskId);
-    if (!subtask) {
+    const subtaskIndex = quest.subtasks.findIndex((st) => st.id === subtaskId);
+    if (subtaskIndex === -1) {
       throw new Error("Subtask not found");
     }
 
+    const subtask = quest.subtasks[subtaskIndex];
+    const wasComplete = subtask.isComplete;
+
+    // Toggle completion
     subtask.isComplete = !subtask.isComplete;
     subtask.completedAt = subtask.isComplete ? new Date().toISOString() : null;
+
+    // Check if all subtasks are now complete
+    const allSubtasksComplete = quest.subtasks.length > 0 &&
+      quest.subtasks.every(st => st.isComplete);
+
+    // If all subtasks complete and quest wasn't already completed, mark it complete
+    if (allSubtasksComplete && !quest.isCompleted) {
+      quest.isCompleted = true;
+      quest.completedAt = new Date().toISOString();
+
+      // Add completion milestone to progress history
+      const totalXpEarned = quest.subtasks.reduce(
+        (sum, st) => sum + (st.estimatePomodoros * quest.difficulty.xpPerPomodoro),
+        0
+      );
+
+      quest.progressHistory.push({
+        date: new Date().toISOString(),
+        sessionsCompleted: quest.subtasks.length,
+        expEarned: Math.round(totalXpEarned * 0.1), // Bonus 10% XP for completion
+        isMilestone: true,
+        notes: `Quest completed! All ${quest.subtasks.length} subtasks finished.`,
+      });
+
+      console.log(`[TaskService] 🎉 Quest "${quest.title}" marked as COMPLETED!`);
+    }
+
+    // If a subtask was unchecked and quest was completed, un-complete the quest
+    if (wasComplete && !subtask.isComplete && quest.isCompleted) {
+      quest.isCompleted = false;
+      quest.completedAt = null;
+      console.log(`[TaskService] Quest "${quest.title}" marked as incomplete (subtask unchecked)`);
+    }
+
+    quest.updatedAt = new Date().toISOString();
 
     await this.db.quests.put(quest);
 

@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { AnalyticsService } from '../worker/services/analytics.service';
+import { QuestService } from '../worker/services/quest.service';
 
 interface QuestVelocityGraphProps {
-    userId: string; 
+    userId: string;
 }
 
 export function QuestVelocityGraph({ userId }: QuestVelocityGraphProps) {
@@ -12,21 +13,30 @@ export function QuestVelocityGraph({ userId }: QuestVelocityGraphProps) {
 
   useEffect(() => {
     const load = async () => {
-      const session = new AnalyticsService();
-      const velocityData = await session.getVelocityData(userId, 7);
+      const analyticsService = new AnalyticsService();
+      const questService = new QuestService();
+
+      // Fetch quests to get their colors
+      const userQuests = await questService.getUserQuests(userId);
+      const questColorMap: Record<string, string> = {};
+      userQuests.forEach((q: any) => {
+        questColorMap[q.title] = q.color || '#5865F2';
+      });
+
+      const velocityData = await analyticsService.getVelocityData(userId, 7);
       setData(velocityData);
-      
+
       if (velocityData.length > 0) {
         const questKeys = Object.keys(velocityData[0]).filter(k => k !== 'day');
-        setQuests(questKeys.map(key => ({ 
-          key, 
-          color: '#5865F2' // Map to actual colors
+        setQuests(questKeys.map((key) => ({
+          key,
+          color: questColorMap[key] || '#5865F2',
         })));
       }
-    }; 
+    };
 
-    if (userId) load(); 
-    
+    if (userId) load();
+
   }, [userId]);
 
 
@@ -71,7 +81,11 @@ export function QuestVelocityGraph({ userId }: QuestVelocityGraphProps) {
         <div className="text-xs text-[#72767d] mb-2">Average Velocity (This Week)</div>
         <div className="grid grid-cols-2 gap-2">
           {quests.map(quest => {
-            const avg = data.reduce((sum, d) => sum + d[quest.key as keyof typeof d], 0) / data.length;
+            const total = data.reduce((sum, d) => {
+              const value = d[quest.key as keyof typeof d];
+              return sum + (typeof value === 'number' ? value : 0);
+            }, 0);
+            const avg = data.length > 0 ? total / data.length : 0;
             return (
               <div key={quest.key} className="flex items-center gap-2">
                 <div

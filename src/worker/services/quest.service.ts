@@ -60,6 +60,17 @@ export class QuestService {
   }
 
   /**
+   * Get archived/hidden quests for a user
+   */
+  async getArchivedQuests(userId: string): Promise<Quest[]> {
+    const quests = await this.db.quests
+      .where("ownerId")
+      .equals(userId)
+      .toArray();
+    return quests.filter(q => q.hidden === true);
+  }
+
+  /**
    * Get single quest by ID
    */
   async getQuest(questId: string): Promise<Quest | undefined> {
@@ -547,6 +558,86 @@ export class QuestService {
     )}`.toLowerCase();
 
     return keywords.some((keyword) => questText.includes(keyword));
+  }
+
+  /**
+   * Toggle subtask completion and check if quest should be marked complete
+   */
+  async toggleSubtaskComplete(
+    questId: string,
+    subtaskId: string
+  ): Promise<{ quest: Quest; questJustCompleted: boolean }> {
+    const quest = await this.db.quests.get(questId);
+    if (!quest) throw new Error("Quest not found");
+
+    // Find and toggle the subtask
+    const subtaskIndex = quest.subtasks.findIndex(st => st.id === subtaskId);
+    if (subtaskIndex === -1) throw new Error("Subtask not found");
+
+    const subtask = quest.subtasks[subtaskIndex];
+    const wasComplete = subtask.isComplete;
+
+    // Toggle completion
+    quest.subtasks[subtaskIndex] = {
+      ...subtask,
+      isComplete: !wasComplete,
+      completedAt: !wasComplete ? new Date().toISOString() : null,
+    };
+
+    // Check if all subtasks are now complete
+    const allSubtasksComplete = quest.subtasks.length > 0 &&
+      quest.subtasks.every(st => st.isComplete);
+
+    let questJustCompleted = false;
+
+    // If all subtasks complete and quest wasn't already completed, mark it complete
+    if (allSubtasksComplete && !quest.isCompleted) {
+      quest.isCompleted = true;
+      quest.completedAt = new Date().toISOString();
+      questJustCompleted = true;
+
+      // Add completion milestone to progress history
+      const totalXpEarned = quest.subtasks.reduce(
+        (sum, st) => sum + (st.estimatePomodoros * quest.difficulty.xpPerPomodoro),
+        0
+      );
+
+      quest.progressHistory.push({
+        date: new Date().toISOString(),
+        sessionsCompleted: quest.subtasks.length,
+        expEarned: Math.round(totalXpEarned * 0.1), // Bonus 10% XP for completion
+        isMilestone: true,
+        notes: `Quest completed! All ${quest.subtasks.length} subtasks finished.`,
+      });
+
+      console.log(`[QuestService] 🎉 Quest "${quest.title}" marked as COMPLETED!`);
+    }
+
+    // If a subtask was unchecked and quest was completed, un-complete the quest
+    if (wasComplete && !subtask.isComplete && quest.isCompleted) {
+      quest.isCompleted = false;
+      quest.completedAt = null;
+      console.log(`[QuestService] Quest "${quest.title}" marked as incomplete (subtask unchecked)`);
+    }
+
+    quest.updatedAt = new Date().toISOString();
+
+    // Save to database
+    await this.db.quests.put(quest);
+
+    // Queue sync
+    await this.db.queueSync({
+      operation: "update",
+      collection: "quests",
+      documentId: questId,
+      data: quest,
+      priority: 7,
+      userId: quest.ownerId,
+      retries: 0,
+      error: null,
+    });
+
+    return { quest, questJustCompleted };
   }
 
   /**

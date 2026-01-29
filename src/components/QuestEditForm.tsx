@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { X, Plus, Zap } from "lucide-react";
 import { Quest } from "../worker/models/Quest";
 
@@ -39,6 +39,7 @@ export function QuestEditForm({
       estimatedPomodoros: st.estimatePomodoros,
     }))
   );
+  const firstSubtaskInputRef = useRef<HTMLInputElement>(null);
 
   const priorityColors = {
     A: "#ED4245",
@@ -76,7 +77,22 @@ export function QuestEditForm({
   };
   const handleAddSubtask = () => {
     setSubtasks([{ title: "", estimatedPomodoros: 1 }, ...subtasks]);
+    // Focus on the new input after React re-renders
+    setTimeout(() => {
+      firstSubtaskInputRef.current?.focus();
+    }, 0);
   };
+
+  const handleSubtaskKeyDown = (e: React.KeyboardEvent, index: number) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      // Only add new subtask if current one has content
+      if (subtasks[index].title.trim()) {
+        handleAddSubtask();
+      }
+    }
+  };
+
   const handleSubtaskChange = (
     index: number,
     field: "title" | "estimatedPomodoros",
@@ -412,10 +428,12 @@ export function QuestEditForm({
                     </div>
                     <input
                       type="text"
+                      ref={index === 0 ? firstSubtaskInputRef : undefined}
                       value={subtask.title}
                       onChange={(e) =>
                         handleSubtaskChange(index, "title", e.target.value)
                       }
+                      onKeyDown={(e) => handleSubtaskKeyDown(e, index)}
                       placeholder="Subtask title..."
                       className="flex-1 bg-transparent text-white px-0 py-0 border-0 outline-none placeholder:text-[#72767d]"
                     />

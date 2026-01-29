@@ -10,6 +10,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { AnalyticsService } from "../worker/services/analytics.service";
+import { QuestService } from "../worker/services/quest.service";
 
 interface WorkDistributionChartProps {
   userId: string;
@@ -33,12 +34,21 @@ export function WorkDistributionChart({
           ? "daily"
           : "weekly";
 
-      const load = async (userId) => {
-        const service = new AnalyticsService();
-        const chartData = await service.getWorkDistribution(userId, period);
+      const load = async (userId: string) => {
+        const analyticsService = new AnalyticsService();
+        const questService = new QuestService();
+
+        // Fetch quests to get their colors
+        const userQuests = await questService.getUserQuests(userId);
+        const questColorMap: Record<string, string> = {};
+        userQuests.forEach((q: any) => {
+          questColorMap[q.title] = q.color || '#5865F2';
+        });
+
+        const chartData = await analyticsService.getWorkDistribution(userId, period);
         setData(chartData);
 
-        // Extract quest names for legend
+        // Extract quest names for legend with quest colors
         if (chartData.length > 0) {
           const questKeys = Object.keys(chartData[0]).filter(
             (k) => k !== "name"
@@ -46,7 +56,7 @@ export function WorkDistributionChart({
           setQuests(
             questKeys.map((key) => ({
               key,
-              color: "#5865F2", // Could map to actual quest colors
+              color: questColorMap[key] || '#5865F2',
             }))
           );
         }

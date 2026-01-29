@@ -13,7 +13,7 @@ import { AnalyticsService } from "../worker/services/analytics.service";
 import { QuestService } from "../worker/services/quest.service";
 
 interface XPLogsViewProps {
-     userId: string; 
+     userId: string;
 }
 
 export function XPLogsView({ userId }: XPLogsViewProps) {
@@ -50,10 +50,7 @@ export function XPLogsView({ userId }: XPLogsViewProps) {
             quest: quest?.title || "Unknown Quest",
             subtask: session.notes || "Focused work",
             xp: session.xpEarned,
-            color:
-              quest?.difficulty?.userAssigned === "Hard"
-                ? "#ED4245"
-                : "#5865F2",
+            color: quest?.color || "#5865F2",
           };
         })
       );

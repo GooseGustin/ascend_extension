@@ -18,6 +18,7 @@ export { QuestService } from './services/quest.service';
 export { NotificationService } from './services/notification.service';
 export { SettingsService, getSettingsService } from './services/settings.service';
 export { GMService } from './services/gm/gm.service';
+export { AntiQuestService, getAntiQuestService, SEVERITY_COLORS } from './services/antiquest.service';
 
 // Export utilities
 export { calculateTaskPriority, sortQuestsByPriority } from './utils/task-sorting.util';
@@ -26,3 +27,4 @@ export { calculateTaskPriority, sortQuestsByPriority } from './utils/task-sortin
 export type { HeatmapDay, TodayMetrics } from './services/analytics.service';
 export type { SearchResult } from './services/search.service';
 export type { ValidationResult } from './api/remote-client';
+export type { Severity, AntiQuestOccurrence, AntiQuestTracking } from './models/Quest';

@@ -81,7 +81,7 @@ export function CompletionTrendsView({userId}: CompletionTrendsViewProps) {
           return {
             quest: quest.title,
             icon: quest.type === 'DungeonQuest' ? '⚔️' : '📋',
-            color: quest.difficulty?.userAssigned === 'Hard' ? '#ED4245' : '#5865F2',
+            color: quest.color || '#5865F2',
             completionRate: thisWeekRate,
             trend: change >= 0 ? 'up' : 'down',
             change,

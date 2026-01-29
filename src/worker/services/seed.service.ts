@@ -160,382 +160,247 @@ export class SeedService {
    */
   private async createTestQuests(userId: string): Promise<void> {
     const quests: Quest[] = [
-      // Quest 1: Active daily quest
+      // Quest 1: Network Automation & Security
       {
-        questId: 'quest-001',
+        questId: 'quest_a857ac64-2680-4c2d-828e-bf6bb53fd667',
         ownerId: userId,
-        title: 'Master React Hooks',
-        description: 'Deep dive into advanced React hooks patterns and best practices',
-        type: 'Quest',
-        isDungeon: false,
-        isPublic: true,
-        tags: ['react', 'frontend', 'learning'],
-        hidden: false,
-        behavior: 'progressive', 
-        priority: 'A',
-        color: QUEST_COLORS[Math.floor(Math.random() * QUEST_COLORS.length)],
-        
-        difficulty: {
-          userAssigned: 'Medium',
-          gmValidated: 'Medium',
-          isLocked: true,
-          validatedAt: new Date(Date.now() - 5 * 86400000).toISOString(),
-          xpPerPomodoro: 200
-        },
-        
-        schedule: {
-          frequency: 'Daily',
-          targetCompletionsPerCycle: 2,
-          pomodoroDurationMin: 25,
-          breakDurationMin: 5,
-          preferredTimeSlots: ['09:00', '14:00']
-        },
-        
-        subtasks: [
-          {
-            id: 'subtask-001',
-            title: 'Study useReducer patterns',
-            estimatePomodoros: 3,
-            isComplete: true,
-            completedAt: new Date(Date.now() - 2 * 86400000).toISOString(),
-            revisionCount: 0
-          },
-          {
-            id: 'subtask-002',
-            title: 'Build custom hook for API calls',
-            estimatePomodoros: 4,
-            isComplete: false,
-            completedAt: null,
-            revisionCount: 1
-          },
-          {
-            id: 'subtask-003',
-            title: 'Implement useContext optimization',
-            estimatePomodoros: 3,
-            isComplete: false,
-            completedAt: null,
-            revisionCount: 0
-          }
-        ],
-        
-        watchers: [],
-        members: [],
-        isTrackAligned: true,
-        dueDate: new Date(Date.now() + 7 * 86400000).toISOString(), // 7 days from now
-        isCompleted: false,
-        completedAt: null,
-        
-        activeBuffs: [],
-        
-        gamification: {
-          currentLevel: 5,
-          currentExp: 1200,
-          expToNextLevel: 1875
-        },
-        
-        progressHistory: [
-          {
-            date: new Date(Date.now() - 2 * 86400000).toISOString().split('T')[0],
-            completions: 2,
-            expEarned: 400,
-            timeSpentMin: 50,
-            isMilestone: false,
-            sessionsCompleted: 2
-          },
-          {
-            date: new Date(Date.now() - 1 * 86400000).toISOString().split('T')[0],
-            completions: 1,
-            expEarned: 200,
-            timeSpentMin: 25,
-            isMilestone: false,
-            sessionsCompleted: 1
-          }
-        ],
-        
-        tracking: {
-          totalTrackedTime: 300, // 5 hours
-          velocity: 240, // 1200 XP / 5 hours
-          averageSessionQuality: 82,
-          lastSessionAt: new Date(Date.now() - 86400000).toISOString()
-        },
-        
-        registeredAt: new Date(Date.now() - 10 * 86400000).toISOString(),
-        createdAt: new Date(Date.now() - 10 * 86400000).toISOString(),
-        updatedAt: new Date(Date.now() - 86400000).toISOString(),
-        validationStatus: 'validated'
-      },
-
-      // Quest 2: Weekly project quest
-      {
-        questId: 'quest-002',
-        ownerId: userId,
-        title: 'Build Productivity Dashboard',
-        description: 'Create a comprehensive analytics dashboard for the Ascend app',
+        title: 'Network Automation & Security',
+        description: 'This quest will make me employable as a network automation and security engineer',
         type: 'Quest',
         isDungeon: false,
         isPublic: false,
-        tags: ['project', 'dashboard', 'analytics'],
+        tags: ['Career', 'Engineering', 'Study'],
         hidden: false,
         behavior: 'progressive',
         priority: 'A',
-        color: QUEST_COLORS[Math.floor(Math.random() * QUEST_COLORS.length)],
-        
+        color: '#5C677D',
+
         difficulty: {
           userAssigned: 'Hard',
-          gmValidated: null,
-          isLocked: false,
-          validatedAt: null,
-          xpPerPomodoro: 300
+          gmValidated: 'Hard',
+          isLocked: true,
+          validatedAt: '2026-01-25T10:02:16.886Z',
+          xpPerPomodoro: 150
         },
-        
+
         schedule: {
-          frequency: 'Weekly',
-          targetCompletionsPerCycle: 10,
-          pomodoroDurationMin: 25,
+          frequency: 'Daily',
+          targetCompletionsPerCycle: 1,
+          pomodoroDurationMin: 15,
           breakDurationMin: 5,
-          preferredTimeSlots: ['10:00', '15:00', '20:00']
+          preferredTimeSlots: []
         },
-        
+
         subtasks: [
           {
-            id: 'subtask-004',
-            title: 'Design dashboard wireframes',
-            estimatePomodoros: 2,
-            isComplete: true,
-            completedAt: new Date(Date.now() - 3 * 86400000).toISOString(),
-            revisionCount: 0
-          },
-          {
-            id: 'subtask-005',
-            title: 'Implement heatmap component',
+            id: 'subtask_quest_a857ac64-2680-4c2d-828e-bf6bb53fd667_1769335319321_0',
+            title: 'Advanced orchestration and professional practices',
             estimatePomodoros: 5,
             isComplete: false,
             completedAt: null,
             revisionCount: 0
           },
           {
-            id: 'subtask-006',
-            title: 'Add velocity chart',
+            id: 'subtask_quest_a857ac64-2680-4c2d-828e-bf6bb53fd667_0',
+            title: 'Policy enforcement and compliance automation',
+            estimatePomodoros: 1,
+            isComplete: false,
+            completedAt: null,
+            revisionCount: 0
+          },
+          {
+            id: 'subtask_quest_a857ac64-2680-4c2d-828e-bf6bb53fd667_1',
+            title: 'Threat detection and automated response orchestration',
+            estimatePomodoros: 5,
+            isComplete: false,
+            completedAt: null,
+            revisionCount: 0
+          },
+          {
+            id: 'subtask_quest_a857ac64-2680-4c2d-828e-bf6bb53fd667_2',
+            title: 'Automated vulnerability management and patching',
+            estimatePomodoros: 3,
+            isComplete: false,
+            completedAt: null,
+            revisionCount: 0
+          },
+          {
+            id: 'subtask_quest_a857ac64-2680-4c2d-828e-bf6bb53fd667_3',
+            title: 'Orchestration and automation workflow',
+            estimatePomodoros: 5,
+            isComplete: false,
+            completedAt: null,
+            revisionCount: 0
+          },
+          {
+            id: 'subtask_quest_a857ac64-2680-4c2d-828e-bf6bb53fd667_4',
+            title: 'Network automation and security context',
             estimatePomodoros: 4,
             isComplete: false,
             completedAt: null,
             revisionCount: 0
           },
           {
-            id: 'subtask-007',
-            title: 'Connect to IndexedDB',
-            estimatePomodoros: 3,
+            id: 'subtask_quest_a857ac64-2680-4c2d-828e-bf6bb53fd667_1769396076210',
+            title: 'Setup lab',
+            estimatePomodoros: 1,
             isComplete: false,
             completedAt: null,
             revisionCount: 0
           }
         ],
-        
+
         watchers: [],
         members: [],
-        isTrackAligned: true,
-        dueDate: new Date(Date.now() + 14 * 86400000).toISOString(),
+        isTrackAligned: false,
+        dueDate: '2026-04-26',
         isCompleted: false,
         completedAt: null,
-        
+
         activeBuffs: [],
-        
+
         gamification: {
-          currentLevel: 2,
-          currentExp: 300,
-          expToNextLevel: 1125
+          currentLevel: 1,
+          currentExp: 203,
+          expToNextLevel: 750
         },
-        
+
         progressHistory: [
           {
-            date: new Date(Date.now() - 3 * 86400000).toISOString().split('T')[0],
-            completions: 1,
-            expEarned: 300,
-            timeSpentMin: 50,
-            isMilestone: false,
-            sessionsCompleted: 2
+            date: '2026-01-25',
+            completions: 0,
+            expEarned: 0,
+            timeSpentMin: 0,
+            isMilestone: true,
+            sessionsCompleted: 0
           }
         ],
-        
+
         tracking: {
-          totalTrackedTime: 50,
-          velocity: 360, // 300 XP / 0.83 hours
-          averageSessionQuality: 88,
-          lastSessionAt: new Date(Date.now() - 3 * 86400000).toISOString()
+          totalTrackedTime: 56,
+          velocity: 0,
+          averageSessionQuality: 0,
+          lastSessionAt: '2026-01-26T01:37:46.149Z'
         },
-        
-        registeredAt: new Date(Date.now() - 5 * 86400000).toISOString(),
-        createdAt: new Date(Date.now() - 5 * 86400000).toISOString(),
-        updatedAt: new Date(Date.now() - 3 * 86400000).toISOString(), 
-        validationStatus: 'pending'
+
+        registeredAt: null,
+        createdAt: '2026-01-25T09:55:55.806Z',
+        updatedAt: '2026-01-26T02:54:36.210Z',
+        validationStatus: 'validated'
       },
 
-      // Quest 3: Todo Quest
+      // Quest 2: GRE Study
       {
-        questId: 'quest-003',
+        questId: 'quest_c7090a5e-9ec5-458b-a0e0-b19cb42ecf81',
         ownerId: userId,
-        title: 'Daily Admin Tasks',
-        description: 'Miscellaneous small tasks and administrative work',
-        type: 'TodoQuest',
+        title: 'GRE study',
+        description: 'This quest will help me earn a high score in the GRE exams',
+        type: 'Quest',
         isDungeon: false,
-        isPublic: false,
-        behavior: 'progressive',
-        tags: ['admin', 'quick-tasks'],
+        isPublic: true,
+        tags: ['Study', 'Career'],
         hidden: false,
-        priority: 'C',
-        color: QUEST_COLORS[Math.floor(Math.random() * QUEST_COLORS.length)],
-        
+        behavior: 'progressive',
+        priority: 'A',
+        color: '#E96075',
+
         difficulty: {
-          userAssigned: 'Trivial',
-          gmValidated: 'Trivial',
+          userAssigned: 'Hard',
+          gmValidated: 'Medium',
           isLocked: true,
-          validatedAt: new Date(Date.now() - 1 * 86400000).toISOString(),
-          xpPerPomodoro: 50
+          validatedAt: '2026-01-25T09:51:05.364Z',
+          xpPerPomodoro: 80
         },
-        
+
         schedule: {
-          frequency: 'Daily',
-          targetCompletionsPerCycle: 1,
+          frequency: 'Custom',
+          targetCompletionsPerCycle: 5,
           pomodoroDurationMin: 25,
           breakDurationMin: 5,
-          preferredTimeSlots: ['08:00']
+          preferredTimeSlots: [],
+          customDays: [1, 2, 4, 5, 6]
         },
-        
+
         subtasks: [
           {
-            id: 'subtask-008',
-            title: 'Check and respond to emails',
-            estimatePomodoros: 1,
-            isComplete: true,
-            completedAt: new Date().toISOString(),
-            revisionCount: 0
-          },
-          {
-            id: 'subtask-009',
-            title: 'Update project documentation',
-            estimatePomodoros: 1,
+            id: 'subtask_quest_c7090a5e-9ec5-458b-a0e0-b19cb42ecf81_1769334652066_0',
+            title: 'Practice in test conditions',
+            estimatePomodoros: 5,
             isComplete: false,
             completedAt: null,
             revisionCount: 0
           },
           {
-            id: 'subtask-010',
-            title: 'Review pull requests',
-            estimatePomodoros: 1,
+            id: 'subtask_quest_c7090a5e-9ec5-458b-a0e0-b19cb42ecf81_0',
+            title: 'Essay writing',
+            estimatePomodoros: 10,
+            isComplete: false,
+            completedAt: null,
+            revisionCount: 0
+          },
+          {
+            id: 'subtask_quest_c7090a5e-9ec5-458b-a0e0-b19cb42ecf81_1',
+            title: 'Vocabulary practice',
+            estimatePomodoros: 10,
+            isComplete: false,
+            completedAt: null,
+            revisionCount: 0
+          },
+          {
+            id: 'subtask_quest_c7090a5e-9ec5-458b-a0e0-b19cb42ecf81_2',
+            title: 'Quantitative study',
+            estimatePomodoros: 10,
+            isComplete: false,
+            completedAt: null,
+            revisionCount: 0
+          },
+          {
+            id: 'subtask_quest_c7090a5e-9ec5-458b-a0e0-b19cb42ecf81_3',
+            title: 'Verbal study',
+            estimatePomodoros: 9,
             isComplete: false,
             completedAt: null,
             revisionCount: 0
           }
         ],
-        
+
         watchers: [],
         members: [],
         isTrackAligned: false,
         dueDate: null,
         isCompleted: false,
         completedAt: null,
-        
-        activeBuffs: [],
-        
-        gamification: {
-          currentLevel: 8,
-          currentExp: 450,
-          expToNextLevel: 2531
-        },
-        
-        progressHistory: [],
-        
-        tracking: {
-          totalTrackedTime: 150,
-          velocity: 100, // 50 XP flat rate
-          averageSessionQuality: 65,
-          lastSessionAt: new Date().toISOString()
-        },
-        
-        registeredAt: new Date(Date.now() - 20 * 86400000).toISOString(),
-        createdAt: new Date(Date.now() - 20 * 86400000).toISOString(),
-        updatedAt: new Date().toISOString(), 
-        validationStatus: 'validated'
-      },
 
-      // Quest 4: Overdue quest for testing
-      {
-        questId: 'quest-004',
-        ownerId: userId,
-        title: 'Learn TypeScript Advanced Types',
-        description: 'Master conditional types, mapped types, and template literal types',
-        type: 'Quest',
-        isDungeon: false,
-        isPublic: true,
-        behavior: 'progressive',
-        tags: ['typescript', 'learning'],
-        hidden: false,
-        priority: 'B',
-        color: QUEST_COLORS[Math.floor(Math.random() * QUEST_COLORS.length)],
-        
-        difficulty: {
-          userAssigned: 'Medium',
-          gmValidated: 'Medium',
-          isLocked: true,
-          validatedAt: new Date(Date.now() - 8 * 86400000).toISOString(),
-          xpPerPomodoro: 200
-        },
-        
-        schedule: {
-          frequency: 'Weekly',
-          targetCompletionsPerCycle: 5,
-          pomodoroDurationMin: 25,
-          breakDurationMin: 5,
-          preferredTimeSlots: ['11:00', '16:00']
-        },
-        
-        subtasks: [
-          {
-            id: 'subtask-011',
-            title: 'Study conditional types',
-            estimatePomodoros: 3,
-            isComplete: false,
-            completedAt: null,
-            revisionCount: 0
-          },
-          {
-            id: 'subtask-012',
-            title: 'Practice mapped types',
-            estimatePomodoros: 3,
-            isComplete: false,
-            completedAt: null,
-            revisionCount: 0
-          }
-        ],
-        
-        watchers: [],
-        members: [],
-        isTrackAligned: true,
-        dueDate: new Date(Date.now() - 2 * 86400000).toISOString(), // OVERDUE!
-        isCompleted: false,
-        completedAt: null,
-        
         activeBuffs: [],
-        
+
         gamification: {
           currentLevel: 1,
-          currentExp: 0,
+          currentExp: 24,
           expToNextLevel: 750
         },
-        
-        progressHistory: [],
-        
+
+        progressHistory: [
+          {
+            date: '2026-01-26',
+            completions: 0,
+            expEarned: 0,
+            timeSpentMin: 0,
+            isMilestone: true,
+            sessionsCompleted: 0
+          }
+        ],
+
         tracking: {
-          totalTrackedTime: 0,
+          totalTrackedTime: 13,
           velocity: 0,
           averageSessionQuality: 0,
-          lastSessionAt: null
+          lastSessionAt: '2026-01-26T03:17:27.576Z'
         },
-        
-        registeredAt: new Date(Date.now() - 15 * 86400000).toISOString(),
-        createdAt: new Date(Date.now() - 15 * 86400000).toISOString(),
-        updatedAt: new Date(Date.now() - 15 * 86400000).toISOString(), 
-        validationStatus: 'queued'
+
+        registeredAt: null,
+        createdAt: '2026-01-25T09:46:12.326Z',
+        updatedAt: '2026-01-26T03:20:01.341Z',
+        validationStatus: 'validated'
       }
     ];
 
@@ -554,22 +419,22 @@ export class SeedService {
    */
   private async createHistoricalSessions(userId: string, quests: Quest[]): Promise<void> {
     const sessionsToCreate = [
-      // 7 days ago - 2 sessions
-      { daysAgo: 7, count: 2, questId: quests[0].questId, xp: 200 },
-      // 6 days ago - 1 session
-      { daysAgo: 6, count: 1, questId: quests[1].questId, xp: 300 },
-      // 5 days ago - 3 sessions
-      { daysAgo: 5, count: 3, questId: quests[0].questId, xp: 200 },
-      // 4 days ago - 2 sessions
-      { daysAgo: 4, count: 2, questId: quests[1].questId, xp: 300 },
-      // 3 days ago - 1 session
-      { daysAgo: 3, count: 1, questId: quests[3].questId, xp: 50 },
-      // 2 days ago - 4 sessions (high activity)
-      { daysAgo: 2, count: 4, questId: quests[0].questId, xp: 200 },
-      // 1 day ago - 2 sessions
-      { daysAgo: 1, count: 2, questId: quests[1].questId, xp: 300 },
-      // Today - 1 session
-      { daysAgo: 0, count: 1, questId: quests[2].questId, xp: 50 }
+      // 7 days ago - 2 sessions (Network Automation & Security)
+      { daysAgo: 7, count: 2, questId: quests[0].questId, xp: 150 },
+      // 6 days ago - 1 session (GRE study)
+      { daysAgo: 6, count: 1, questId: quests[1].questId, xp: 80 },
+      // 5 days ago - 3 sessions (Network Automation & Security)
+      { daysAgo: 5, count: 3, questId: quests[0].questId, xp: 150 },
+      // 4 days ago - 2 sessions (GRE study)
+      { daysAgo: 4, count: 2, questId: quests[1].questId, xp: 80 },
+      // 3 days ago - 1 session (Network Automation & Security)
+      { daysAgo: 3, count: 1, questId: quests[0].questId, xp: 150 },
+      // 2 days ago - 4 sessions (GRE study - high activity)
+      { daysAgo: 2, count: 4, questId: quests[1].questId, xp: 80 },
+      // 1 day ago - 2 sessions (Network Automation & Security)
+      { daysAgo: 1, count: 2, questId: quests[0].questId, xp: 150 },
+      // Today - 1 session (GRE study)
+      { daysAgo: 0, count: 1, questId: quests[1].questId, xp: 80 }
     ];
 
     for (const { daysAgo, count, questId, xp } of sessionsToCreate) {

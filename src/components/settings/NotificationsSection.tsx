@@ -1,5 +1,5 @@
 import { Label } from '../ui/label';
-import { Switch } from '../ui/switch';
+import { ToggleSwitch } from '../ui/toggle-switch';
 import { Input } from '../ui/input';
 import { Separator } from '../ui/separator';
 import type { UserSettings } from '../../worker/models/UserSettings';
@@ -38,7 +38,7 @@ export function NotificationsSection({ settings, onUpdate }: NotificationsSectio
             Receive a daily summary of your progress
           </p>
         </div>
-        <Switch
+        <ToggleSwitch
           checked={settings.notifications.dailySummary}
           onCheckedChange={(checked) => handleToggle('dailySummary', checked)}
         />
@@ -68,8 +68,7 @@ export function NotificationsSection({ settings, onUpdate }: NotificationsSectio
             Get notified when tasks are due
           </p>
         </div>
-        <Switch
-          className=""
+        <ToggleSwitch
           checked={settings.notifications.taskReminders}
           onCheckedChange={(checked) => handleToggle('taskReminders', checked)}
         />
@@ -84,7 +83,7 @@ export function NotificationsSection({ settings, onUpdate }: NotificationsSectio
             Reminders for scheduled quests
           </p>
         </div>
-        <Switch
+        <ToggleSwitch
           checked={settings.notifications.questReminders}
           onCheckedChange={(checked) => handleToggle('questReminders', checked)}
         />
@@ -99,7 +98,7 @@ export function NotificationsSection({ settings, onUpdate }: NotificationsSectio
             Soft nudges to keep you on track
           </p>
         </div>
-        <Switch
+        <ToggleSwitch
           checked={settings.notifications.aiNudges}
           onCheckedChange={(checked) => handleToggle('aiNudges', checked)}
         />

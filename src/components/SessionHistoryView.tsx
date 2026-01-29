@@ -17,40 +17,40 @@ export function SessionHistoryView({ userId, logType = 'session' }: SessionHisto
   useEffect(() => {
     async function loadData() {
       if (logType === 'session' || logType === 'xp') {
-        const authService = new AuthService(); 
-        const analyticsService = new AnalyticsService(); 
+        const authService = new AuthService();
+        const analyticsService = new AnalyticsService();
         const questService = new QuestService();
         const user: any = await authService.getCurrentUser();
         const sessions = await analyticsService.getSessionHistory({
-          userId: user.userId, 
-          limit: 50 
+          userId: user.userId,
+          limit: 50
         });
-        
+
         // Get quest details for each session
         const enrichedSessions = await Promise.all(
           sessions.map(async (session: any) => {
             const quest = await questService.getQuest(session.questId);
             return {
               id: session.sessionId,
-              date: new Date(session.startTime).toLocaleDateString('en-US', { 
-                month: 'short', 
-                day: 'numeric', 
-                year: 'numeric' 
+              date: new Date(session.startTime).toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric'
               }),
-              time: new Date(session.startTime).toLocaleTimeString('en-US', { 
-                hour: 'numeric', 
-                minute: '2-digit' 
+              time: new Date(session.startTime).toLocaleTimeString('en-US', {
+                hour: 'numeric',
+                minute: '2-digit'
               }),
               quest: quest?.title || 'Unknown Quest',
               subtask: session.notes || 'Focused work',
               duration: session.actualDurationMin,
               xp: session.xpEarned,
               interrupted: session.interruptions.length > 0,
-              color: quest?.difficulty?.userAssigned === 'Hard' ? '#ED4245' : '#5865F2'
+              color: quest?.color || '#5865F2'
             };
           })
         );
-        
+
         setSessionHistory(enrichedSessions);
         
         // XP logs are just sessions with different formatting
@@ -68,33 +68,32 @@ export function SessionHistoryView({ userId, logType = 'session' }: SessionHisto
       
       if (logType === 'milestone') {
         // Load milestone data from quest progress history
-        // const quests = await workerRequest('quest:getAllQuests', undefined);
-        const authService = new AuthService(); 
+        const authService = new AuthService();
         const questService = new QuestService();
         const user: any = await authService.getCurrentUser();
         const quests = await questService.getUserQuests(user.userId);
         const milestones: any[] = [];
-        
+
         quests.forEach((quest: any) => {
           quest.progressHistory?.forEach((entry: any) => {
             if (entry.isMilestone) {
               milestones.push({
                 id: `${quest.questId}-${entry.date}`,
-                date: new Date(entry.date).toLocaleDateString('en-US', { 
-                  month: 'short', 
-                  day: 'numeric', 
-                  year: 'numeric' 
+                date: new Date(entry.date).toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric'
                 }),
                 quest: quest.title,
                 milestone: `Milestone achieved`,
                 xp: entry.expEarned,
-                color: quest.difficulty?.userAssigned === 'Hard' ? '#ED4245' : '#5865F2'
+                color: quest.color || '#5865F2'
               });
             }
           });
         });
-        
-        setMilestoneLogs(milestones.sort((a, b) => 
+
+        setMilestoneLogs(milestones.sort((a, b) =>
           new Date(b.date).getTime() - new Date(a.date).getTime()
         ));
       }

@@ -4,12 +4,34 @@
  */
 export type DifficultyTier = "Trivial" | "Easy" | "Medium" | "Hard" | "Epic";
 
+// AntiQuest Types
+export type Severity = "mild" | "moderate" | "severe" | "critical";
+
+export interface AntiQuestOccurrence {
+  id: string;
+  timestamp: string; // ISO8601
+  xpPenalty: number;
+  actualPenalty?: number; // Actual XP deducted (may be less due to floor)
+  notes?: string;
+}
+
+export interface AntiQuestTracking {
+  totalOccurrences: number;
+  occurrencesToday: number;
+  occurrencesThisWeek: number;
+  occurrencesThisMonth: number;
+  lastOccurredAt: string | null; // ISO8601
+  currentGapDays: number;
+  longestGapDays: number;
+  totalXPLost: number;
+}
+
 export interface Quest {
   questId: string;
   ownerId: string;
   title: string;
   description: string;
-  type: "Quest" | "DungeonQuest" | "TodoQuest";
+  type: "Quest" | "DungeonQuest" | "TodoQuest" | "AntiQuest";
   isDungeon: boolean;
   isPublic: boolean;
   tags: string[];
@@ -69,6 +91,16 @@ export interface Quest {
 
   // GM coaching data
   gmFeedback?: GMFeedback;
+
+  // AntiQuest-specific fields (only set when type === "AntiQuest")
+  severity?: {
+    userAssigned: Severity;
+    xpPenaltyPerEvent: number;
+    isLocked: boolean;
+    lockedAt?: string; // ISO8601 - when first occurrence locked severity
+  };
+  antiEvents?: AntiQuestOccurrence[];
+  antiTracking?: AntiQuestTracking;
 
   // Validation status for offline queue handling
   validationStatus: "pending" | "validated" | "failed" | "queued";

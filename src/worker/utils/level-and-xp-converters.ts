@@ -15,5 +15,34 @@ export function xpDeltaForLevel(L: number) {
 }
 
 export function currentLevelFromExp(currentExp: number) {
-  return Math.floor(Math.log(currentExp / 100 + 1) * 5);
+  // Floor protection: ensure XP is never negative
+  const safeXP = Math.max(0, currentExp);
+  return Math.floor(Math.log(safeXP / 100 + 1) * 5);
+}
+
+/**
+ * Calculate the XP floor for a given level.
+ * This is the minimum XP a user can have at their current level.
+ * Used by AntiQuest penalties to prevent de-leveling.
+ */
+export function getLevelFloorXP(level: number): number {
+  return totalExpForLevel(level);
+}
+
+/**
+ * Apply an XP penalty with floor protection.
+ * Returns the new XP and actual penalty applied (may be less due to floor).
+ */
+export function applyXPPenaltyWithFloor(
+  currentXP: number,
+  penalty: number
+): { newXP: number; actualPenalty: number } {
+  const currentLevel = currentLevelFromExp(currentXP);
+  const levelFloor = totalExpForLevel(currentLevel);
+
+  // Apply penalty, but don't go below level floor
+  const newXP = Math.max(levelFloor, currentXP - Math.abs(penalty));
+  const actualPenalty = currentXP - newXP;
+
+  return { newXP, actualPenalty };
 }

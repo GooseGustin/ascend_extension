@@ -1,7 +1,10 @@
 import { Suspense, useState } from 'react';
 import { QuestDetails } from './QuestDetails';
 import { DiscoveryView } from './DiscoveryView';
-import type { Quest, Subtask } from '../worker/models/Quest';
+import { AntiQuestDetails } from './AntiQuestDetails';
+import { AntiQuestCreationForm } from './AntiQuestCreationForm';
+import { AntiQuestEditForm } from './AntiQuestEditForm';
+import type { Quest, Subtask, Severity } from '../worker/models/Quest';
 import type { GoalComment } from '../worker/models/GoalComment';
 import { Task } from '../App';
 import { QuestCreationForm } from './QuestCreationForm';
@@ -10,6 +13,7 @@ import { QuestEditForm } from './QuestEditForm';
 
 interface QuestsMainPanelProps {
   quests: Quest[];
+  archivedQuests?: Quest[];
   tasks: Task[];
   selectedQuestId: string | null;
   discoveryMode: boolean;
@@ -24,15 +28,25 @@ interface QuestsMainPanelProps {
   // onCreateQuest: (quest: Omit<Quest, 'id' | 'currentXP' | 'progress'>) => void;
   onCreateQuest: () => void;
   onCancelCreate: () => void;
-  onAddSubtask: (questId: string, title: string) => void;
+  onAddSubtask: (questId: string, title: string) => void | Promise<void>;
   // onFloatingPlusClick: () => void;
   onDeleteQuest?: (questId: string) => void;
   onArchiveQuest?: (questId: string) => void;
   onUpdateQuest?: (questId: string, updates: Partial<Quest>) => void;
+  // AntiQuest props
+  antiQuests?: Quest[];
+  selectedAntiQuestId?: string | null;
+  onLogOccurrence?: (antiQuestId: string, notes?: string, timestamp?: string) => void;
+  createAntiQuestMode?: boolean;
+  onCreateAntiQuest?: (data: { title: string; description?: string; severity: Severity; tags?: string[] }) => void;
+  onCancelAntiQuestCreate?: () => void;
+  onDeleteAntiQuest?: (antiQuestId: string) => void;
+  onUpdateAntiQuest?: (antiQuestId: string, updates: { title?: string; description?: string; severity?: Severity; tags?: string[] }) => void;
 }
 
 export function QuestsMainPanel({
   quests,
+  archivedQuests = [],
   tasks,
   selectedQuestId,
   discoveryMode,
@@ -50,10 +64,23 @@ export function QuestsMainPanel({
   onDeleteQuest,
   onArchiveQuest,
   onUpdateQuest,
+  // AntiQuest props
+  antiQuests = [],
+  selectedAntiQuestId,
+  onLogOccurrence,
+  createAntiQuestMode = false,
+  onCreateAntiQuest,
+  onCancelAntiQuestCreate,
+  onDeleteAntiQuest,
+  onUpdateAntiQuest,
 }: QuestsMainPanelProps) {
   const [editMode, setEditMode] = useState(false);
+  const [antiQuestEditMode, setAntiQuestEditMode] = useState(false);
+  const [editingAntiQuest, setEditingAntiQuest] = useState<Quest | null>(null);
   const [editingQuest, setEditingQuest] = useState<Quest | null>(null);
-  const selectedQuest = selectedQuestId ? quests.find(q => q.questId === selectedQuestId) : null;
+  // Search both active and archived quests
+  const allQuests = [...quests, ...archivedQuests];
+  const selectedQuest = selectedQuestId ? allQuests.find(q => q.questId === selectedQuestId) : null;
 
   if (createQuestMode) {
     return (
@@ -83,6 +110,56 @@ export function QuestsMainPanel({
         />
       </Suspense>
     );
+  }
+
+  // AntiQuest Creation Mode
+  if (createAntiQuestMode && onCreateAntiQuest && onCancelAntiQuestCreate) {
+    return (
+      <Suspense fallback={<div>Loading form...</div>}>
+        <AntiQuestCreationForm
+          onCreateAntiQuest={onCreateAntiQuest}
+          onCancel={onCancelAntiQuestCreate}
+        />
+      </Suspense>
+    );
+  }
+
+  // AntiQuest Edit Mode
+  if (antiQuestEditMode && editingAntiQuest && onUpdateAntiQuest) {
+    return (
+      <Suspense fallback={<div>Loading form...</div>}>
+        <AntiQuestEditForm
+          antiQuest={editingAntiQuest}
+          onSave={(updates) => {
+            onUpdateAntiQuest(editingAntiQuest.questId, updates);
+            setAntiQuestEditMode(false);
+            setEditingAntiQuest(null);
+          }}
+          onCancel={() => {
+            setAntiQuestEditMode(false);
+            setEditingAntiQuest(null);
+          }}
+        />
+      </Suspense>
+    );
+  }
+
+  // AntiQuest Details View
+  if (selectedAntiQuestId && onLogOccurrence) {
+    const selectedAntiQuest = antiQuests.find(aq => aq.questId === selectedAntiQuestId);
+    if (selectedAntiQuest) {
+      return (
+        <AntiQuestDetails
+          antiQuest={selectedAntiQuest}
+          onLogOccurrence={onLogOccurrence}
+          onDeleteAntiQuest={onDeleteAntiQuest}
+          onEditAntiQuest={(antiQuest) => {
+            setEditingAntiQuest(antiQuest);
+            setAntiQuestEditMode(true);
+          }}
+        />
+      );
+    }
   }
 
   if (discoveryMode) {

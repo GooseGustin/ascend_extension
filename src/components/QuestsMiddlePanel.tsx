@@ -1,48 +1,66 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronRight, Search, MessageCircle, Bell, Compass, Plus, Sparkles } from 'lucide-react';
+import { ChevronDown, ChevronRight, Search, MessageCircle, Bell, Compass, Plus, Sparkles, AlertTriangle } from 'lucide-react';
 import { Input } from './ui/input';
-import type { Quest } from '../worker/models/Quest';
+import type { Quest, Severity } from '../worker/models/Quest';
 import type { Notification as WorkerNotification } from '../worker/models/Notification';
 import { QuestService } from '../worker';
 import { GoalComment } from '../worker/models/GoalComment';
 
 interface QuestsMiddlePanelProps {
   quests: Quest[];
+  archivedQuests: Quest[];
   notifications: WorkerNotification[];
   onQuestSelect: (questId: string) => void;
   onDiscoverySelect: () => void;
   onNotificationClick: (questId: string) => void;
-  onCreateQuestSelect: () => void; 
+  onCreateQuestSelect: () => void;
   selectedQuestId: string | null;
   discoveryMode: boolean;
   createQuestMode: boolean;
+  // AntiQuest props
+  antiQuests?: Quest[];
+  onAntiQuestSelect?: (antiQuestId: string) => void;
+  selectedAntiQuestId?: string | null;
+  onCreateAntiQuestSelect?: () => void;
+  createAntiQuestMode?: boolean;
 }
 
 export function QuestsMiddlePanel({
   quests,
+  archivedQuests,
   notifications,
   onQuestSelect,
   onDiscoverySelect,
   onNotificationClick,
-  onCreateQuestSelect, 
+  onCreateQuestSelect,
   selectedQuestId,
   discoveryMode,
   createQuestMode,
+  // AntiQuest props
+  antiQuests = [],
+  onAntiQuestSelect,
+  selectedAntiQuestId,
+  onCreateAntiQuestSelect,
+  createAntiQuestMode = false,
 }: QuestsMiddlePanelProps) {
   const [expandedSections, setExpandedSections] = useState<{
     myQuests: boolean;
     watching: boolean;
+    completed: boolean;
     archived: boolean;
+    antiQuests: boolean;
   }>({
     myQuests: true,
     watching: true,
+    completed: false,
     archived: false,
+    antiQuests: false, // Collapsed by default
   });
   const [searchQuery, setSearchQuery] = useState('');
   // const [questComments, setQuestComments] = useState<Record<string, GoalComment[]>>({});
   // const questService = new QuestService();
 
-  const toggleSection = (section: 'myQuests' | 'watching' | 'archived') => {
+  const toggleSection = (section: 'myQuests' | 'watching' | 'completed' | 'archived' | 'antiQuests') => {
     setExpandedSections((prev) => ({
       ...prev,
       [section]: !prev[section],
@@ -61,9 +79,11 @@ export function QuestsMiddlePanel({
 //     }
 //   };
   // Filter quests based on watchers array (using worker Quest model)
-  const myQuests = quests.filter(q => q.ownerId && !q.hidden); // Quests I own (not hidden)
-  const archivedQuests = quests.filter(q => q.ownerId && q.hidden); // Archived quests
-  const watchingQuests = quests.filter(q => q.watchers && q.watchers.length > 0 && !q.hidden);
+  // IMPORTANT: Exclude AntiQuests from regular quest lists - they have their own section
+  const myQuests = quests.filter(q => q.ownerId && !q.hidden && !q.isCompleted && q.type !== 'AntiQuest');
+  const completedQuests = quests.filter(q => q.ownerId && !q.hidden && q.isCompleted && q.type !== 'AntiQuest');
+  // archivedQuests is now passed as a prop (already filtered to exclude AntiQuests)
+  const watchingQuests = quests.filter(q => q.watchers && q.watchers.length > 0 && !q.hidden && q.type !== 'AntiQuest');
 
   // Categorize my quests
   const personalQuests = myQuests.filter(q => !q.isDungeon && (!q.members || q.members.length <= 1));
@@ -77,10 +97,31 @@ export function QuestsMiddlePanel({
   const filteredWatching = watchingQuests.filter(q =>
     q.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
+  const filteredCompleted = completedQuests.filter(q =>
+    q.title.toLowerCase().includes(searchQuery.toLowerCase())
+  );
   const filteredArchived = archivedQuests.filter(q =>
+    q.title.toLowerCase().includes(searchQuery.toLowerCase()) && q.type !== 'AntiQuest'
+  );
+  const filteredAntiQuests = antiQuests.filter(q =>
     q.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Helper to get severity color
+  const getSeverityColor = (severity: Severity | undefined) => {
+    switch (severity) {
+      case 'mild':
+        return '#f59e0b';
+      case 'moderate':
+        return '#ea580c';
+      case 'severe':
+        return '#dc2626';
+      case 'critical':
+        return '#be123c';
+      default:
+        return '#ed4245';
+    }
+  };
 
   const QuestItem = ({ quest, isWatching = false }: { quest: Quest; isWatching?: boolean }) => {
     const progress = Math.round((quest.gamification.currentExp / quest.gamification.expToNextLevel) * 100);
@@ -112,6 +153,35 @@ export function QuestsMiddlePanel({
               backgroundColor: color,
             }}
           />
+        </div>
+      </button>
+    );
+  };
+
+  const AntiQuestItem = ({ antiQuest }: { antiQuest: Quest }) => {
+    // Calculate weekly occurrence count for badge
+    const now = new Date();
+    const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const weekCount = (antiQuest.antiEvents || []).filter(o => new Date(o.timestamp) >= weekStart).length;
+    const severity = antiQuest.severity?.userAssigned;
+    const severityColor = getSeverityColor(severity);
+
+    return (
+      <button
+        onClick={() => onAntiQuestSelect?.(antiQuest.questId)}
+        className={`
+          w-full text-left px-2 py-2 rounded hover:bg-[#34373c] transition-colors
+          ${selectedAntiQuestId === antiQuest.questId ? 'bg-[#404449]' : ''}
+        `}
+      >
+        <div className="flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4 shrink-0" style={{ color: severityColor }} />
+          <span className="text-sm text-[#dcddde] flex-1 truncate">{antiQuest.title}</span>
+          {weekCount > 0 && (
+            <div className="w-5 h-5 rounded-full bg-[#ed4245] flex items-center justify-center shrink-0">
+              <span className="text-xs text-white">{weekCount}</span>
+            </div>
+          )}
         </div>
       </button>
     );
@@ -268,6 +338,35 @@ export function QuestsMiddlePanel({
           </button>
         </div>
 
+        {/* Completed Quests (Collapsible) */}
+        <div className="border-b border-[#202225]">
+          <button
+            onClick={() => toggleSection('completed')}
+            className="w-full px-3 py-2 flex items-center gap-2 hover:bg-[#34373c] transition-colors"
+          >
+            {expandedSections.completed ? (
+              <ChevronDown className="w-4 h-4 text-[#b9bbbe]" />
+            ) : (
+              <ChevronRight className="w-4 h-4 text-[#b9bbbe]" />
+            )}
+            <span className="text-xs uppercase tracking-wide text-[#57F287]">Completed</span>
+            <span className="text-xs text-[#72767d] ml-auto">{filteredCompleted.length}</span>
+          </button>
+
+          {expandedSections.completed && (
+            <div className="px-2 pb-2 space-y-1">
+              {filteredCompleted.map(quest => (
+                <QuestItem key={quest.questId} quest={quest} />
+              ))}
+              {filteredCompleted.length === 0 && (
+                <div className="px-2 py-3 text-xs text-[#72767d] text-center">
+                  No completed quests
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
         {/* Archived Quests (Collapsible) */}
         <div className="border-b border-[#202225]">
           <button
@@ -285,12 +384,60 @@ export function QuestsMiddlePanel({
 
           {expandedSections.archived && (
             <div className="px-2 pb-2 space-y-1">
+              {/* Archived Quests */}
               {filteredArchived.map(quest => (
                 <QuestItem key={quest.questId} quest={quest} />
               ))}
+
               {filteredArchived.length === 0 && (
                 <div className="px-2 py-3 text-xs text-[#72767d] text-center">
                   No archived quests
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Anti Quests (Collapsible) */}
+        <div className="border-b border-[#202225]">
+          <button
+            onClick={() => toggleSection('antiQuests')}
+            className="w-full px-3 py-2 flex items-center gap-2 hover:bg-[#34373c] transition-colors"
+          >
+            {expandedSections.antiQuests ? (
+              <ChevronDown className="w-4 h-4 text-[#b9bbbe]" />
+            ) : (
+              <ChevronRight className="w-4 h-4 text-[#b9bbbe]" />
+            )}
+            <AlertTriangle className="w-4 h-4 text-[#ed4245]" />
+            <span className="text-xs uppercase tracking-wide text-[#b9bbbe]">Anti Quests</span>
+            <span className="text-xs text-[#72767d] ml-auto">{filteredAntiQuests.length}</span>
+          </button>
+
+          {expandedSections.antiQuests && (
+            <div className="px-2 pb-2 space-y-1">
+              {/* Create New AntiQuest Button */}
+              {onCreateAntiQuestSelect && (
+                <button
+                  onClick={onCreateAntiQuestSelect}
+                  className={`
+                    w-full px-2 py-2.5 rounded flex items-center gap-2 transition-all mb-2
+                    ${createAntiQuestMode ? 'bg-[#ed4245] bg-opacity-30 border-2 border-[#ed4245]' : 'bg-[#202225] hover:bg-[#2a2d31] border border-[#202225]'}
+                  `}
+                >
+                  <div className="w-5 h-5 rounded-full bg-[#ed4245] flex items-center justify-center">
+                    <Plus className="w-3 h-3 text-white" />
+                  </div>
+                  <span className="text-sm text-[#dcddde]">Create New AntiQuest</span>
+                </button>
+              )}
+
+              {filteredAntiQuests.map(antiQuest => (
+                <AntiQuestItem key={antiQuest.questId} antiQuest={antiQuest} />
+              ))}
+              {filteredAntiQuests.length === 0 && (
+                <div className="px-2 py-3 text-xs text-[#72767d] text-center">
+                  No anti quests yet
                 </div>
               )}
             </div>

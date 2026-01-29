@@ -17,7 +17,9 @@ import {
   getTaskService,
   QuestUIAdapter,
   getSettingsService,
+  getAntiQuestService,
 } from "./worker";
+import type { Severity } from "./worker/models/Quest";
 import type {
   Quest,
   Subtask,
@@ -57,6 +59,7 @@ export interface FocusSession {
 }
 
 const taskService = getTaskService();
+const antiQuestService = getAntiQuestService();
 
 export default function App() {
   const [activeNav, setActiveNav] = useState("home");
@@ -65,6 +68,11 @@ export default function App() {
   const [discoveryMode, setDiscoveryMode] = useState(false);
   const [createQuestMode, setCreateQuestMode] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+
+  // AntiQuest state
+  const [antiQuests, setAntiQuests] = useState<WorkerQuest[]>([]);
+  const [selectedAntiQuestId, setSelectedAntiQuestId] = useState<string | null>(null);
+  const [createAntiQuestMode, setCreateAntiQuestMode] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [progressView, setProgressView] = useState("overview");
@@ -76,6 +84,7 @@ export default function App() {
 
   // Worker data
   const [workerQuests, setWorkerQuests] = useState<WorkerQuest[]>([]);
+  const [archivedQuests, setArchivedQuests] = useState<WorkerQuest[]>([]);
   const [watchedQuests, setWatchedQuests] = useState<WorkerQuest[]>([]);
   const [publicQuests, setPublicQuests] = useState<WorkerQuest[]>([]);
   const [questComments, setQuestComments] = useState<
@@ -164,7 +173,14 @@ export default function App() {
       loadTasks(uid),
       loadQuests(uid),
       loadNotifications(uid),
+      loadAntiQuests(uid),
     ]);
+  };
+
+  const loadAntiQuests = async (uid: string) => {
+    if (!uid) return;
+    const userAntiQuests = await antiQuestService.getAntiQuests(uid);
+    setAntiQuests(userAntiQuests);
   };
 
   const loadTasks = async (userId: string) => {
@@ -194,13 +210,15 @@ export default function App() {
   };
 
   const loadQuests = async (uid: string) => {
-    const [myQuests, watched, discovered] = await Promise.all([
+    const [myQuests, archived, watched, discovered] = await Promise.all([
       questService.getUserQuests(uid),
+      questService.getArchivedQuests(uid),
       questService.getWatchedQuests(uid),
       questService.getPublicQuests(20),
     ]);
 
     setWorkerQuests(myQuests);
+    setArchivedQuests(archived);
     setWatchedQuests(watched);
     setPublicQuests(discovered);
 
@@ -468,7 +486,7 @@ export default function App() {
       // 2. Update global task list
       setTasks((prev) =>
         prev.map((t) =>
-          t.id === subtaskId ? { ...t, isComplete: !t.isComplete } : t
+          t.id === subtaskId ? { ...t, completed: !t.completed } : t
         )
       );
 
@@ -477,10 +495,17 @@ export default function App() {
         prev.map((q) => (q.questId === updatedQuest.questId ? updatedQuest : q))
       );
 
-      await loadQuests(userId);
+      // Reload quests and tasks to ensure consistency
+      await Promise.all([
+        loadQuests(userId),
+        loadTasks(userId),
+      ]);
     } catch (error) {
       console.error("Failed to toggle subtask:", error);
-      await loadQuests(userId); // Revert
+      await Promise.all([
+        loadQuests(userId),
+        loadTasks(userId),
+      ]);
     }
   };
 
@@ -503,16 +528,25 @@ export default function App() {
   const handleQuestSelect = (questId: string) => {
     setSelectedQuestId(questId);
     setDiscoveryMode(false);
+    setCreateQuestMode(false);
+    setSelectedAntiQuestId(null);
+    setCreateAntiQuestMode(false);
   };
 
   const handleDiscoverySelect = () => {
     setDiscoveryMode(true);
     setSelectedQuestId(null);
+    setCreateQuestMode(false);
+    setSelectedAntiQuestId(null);
+    setCreateAntiQuestMode(false);
   };
 
   const handleNotificationClick = async (questId: string) => {
     setSelectedQuestId(questId);
     setDiscoveryMode(false);
+    setCreateQuestMode(false);
+    setSelectedAntiQuestId(null);
+    setCreateAntiQuestMode(false);
     setActiveNav("quests");
 
     // Mark notification as read
@@ -551,6 +585,8 @@ export default function App() {
     setCreateQuestMode(true);
     setDiscoveryMode(false);
     setSelectedQuestId(null);
+    setSelectedAntiQuestId(null);
+    setCreateAntiQuestMode(false);
   };
 
   const handleFloatingPlusClick = () => {
@@ -558,15 +594,16 @@ export default function App() {
     handleCreateQuestSelect();
   };
 
-  const handleCreateQuest = async () =>
-    // newQuestData: Omit<any, "id" | "currentXP" | "progress">
-    {
+  const handleCreateQuest = async () => {
       if (!userId) return;
 
       try {
         // Quest is already created by QuestCreationForm via questService
-        // Just reload quests to show the new one
-        await loadQuests(userId);
+        // Reload quests and tasks to show the new one
+        await Promise.all([
+          loadQuests(userId),
+          loadTasks(userId),
+        ]);
 
         setCreateQuestMode(false);
 
@@ -590,8 +627,11 @@ export default function App() {
         estimatePomodoros: 1,
       });
 
-      // Reload quests to show new subtask
-      await loadQuests(userId);
+      // Reload quests and tasks to show new subtask
+      await Promise.all([
+        loadQuests(userId),
+        loadTasks(userId),
+      ]);
     } catch (error) {
       console.error("Failed to add subtask:", error);
     }
@@ -639,6 +679,9 @@ export default function App() {
       // Remove from state
       setWorkerQuests((prev) => prev.filter((q) => q.questId !== questId));
 
+      // Reload tasks to remove deleted quest's tasks from today's list
+      await loadTasks(userId);
+
       // Clear selection if deleted quest was selected
       if (selectedQuestId === questId) {
         setSelectedQuestId(null);
@@ -654,17 +697,21 @@ export default function App() {
     try {
       const updatedQuest = await questService.archiveQuest(userId, questId);
 
-      // Update state with toggled hidden property
-      setWorkerQuests((prev) =>
-        prev.map((q) =>
-          q.questId === questId ? updatedQuest : q
-        )
-      );
-
-      // Clear selection if archived quest was selected
-      if (selectedQuestId === questId) {
-        setSelectedQuestId(null);
+      if (updatedQuest.hidden) {
+        // Quest was archived: move from workerQuests to archivedQuests
+        setWorkerQuests((prev) => prev.filter((q) => q.questId !== questId));
+        setArchivedQuests((prev) => [...prev, updatedQuest]);
+      } else {
+        // Quest was unarchived: move from archivedQuests to workerQuests
+        setArchivedQuests((prev) => prev.filter((q) => q.questId !== questId));
+        setWorkerQuests((prev) => [...prev, updatedQuest]);
       }
+
+      // Reload tasks to update today's tasks list
+      await loadTasks(userId);
+
+      // Clear selection after archiving/unarchiving
+      setSelectedQuestId(null);
     } catch (error) {
       console.error("Failed to archive quest:", error);
     }
@@ -676,16 +723,119 @@ export default function App() {
     try {
       await questService.updateQuest(questId, updates);
 
-      // Update state
+      // Update state and reload tasks
       setWorkerQuests((prev) =>
         prev.map((q) =>
           q.questId === questId ? { ...q, ...updates } : q
         )
       );
+
+      // Reload tasks in case quest title or other task-relevant properties changed
+      await loadTasks(userId);
     } catch (error) {
       console.error("Failed to update quest:", error);
     }
   };
+
+  // ========== AntiQuest Handlers ==========
+
+  const handleAntiQuestSelect = (antiQuestId: string) => {
+    setSelectedAntiQuestId(antiQuestId);
+    setSelectedQuestId(null);
+    setDiscoveryMode(false);
+    setCreateQuestMode(false);
+    setCreateAntiQuestMode(false);
+  };
+
+  const handleCreateAntiQuestSelect = () => {
+    setCreateAntiQuestMode(true);
+    setDiscoveryMode(false);
+    setCreateQuestMode(false);
+    setSelectedQuestId(null);
+    setSelectedAntiQuestId(null);
+  };
+
+  const handleCreateAntiQuest = async (data: {
+    title: string;
+    description?: string;
+    severity: Severity;
+    tags?: string[];
+  }) => {
+    if (!userId) return;
+
+    try {
+      const newAntiQuest = await antiQuestService.createAntiQuest(data);
+      setAntiQuests((prev) => [...prev, newAntiQuest]);
+      setCreateAntiQuestMode(false);
+      setSelectedAntiQuestId(newAntiQuest.questId);
+    } catch (error) {
+      console.error("Failed to create AntiQuest:", error);
+    }
+  };
+
+  const handleCancelAntiQuestCreate = () => {
+    setCreateAntiQuestMode(false);
+  };
+
+  const handleLogOccurrence = async (
+    antiQuestId: string,
+    notes?: string,
+    timestamp?: string
+  ) => {
+    if (!userId) return;
+
+    try {
+      const { antiQuest } = await antiQuestService.logOccurrence(
+        antiQuestId,
+        notes,
+        timestamp
+      );
+
+      // Update local state
+      setAntiQuests((prev) =>
+        prev.map((aq) =>
+          aq.questId === antiQuestId ? antiQuest : aq
+        )
+      );
+
+      // Reload user data to reflect XP changes
+      await loadAllData(userId);
+    } catch (error) {
+      console.error("Failed to log occurrence:", error);
+      alert(error instanceof Error ? error.message : "Failed to log occurrence");
+    }
+  };
+
+  const handleDeleteAntiQuest = async (antiQuestId: string) => {
+    if (!userId) return;
+
+    try {
+      await antiQuestService.deleteAntiQuest(antiQuestId);
+      setAntiQuests((prev) => prev.filter((aq) => aq.questId !== antiQuestId));
+      setSelectedAntiQuestId(null);
+    } catch (error) {
+      console.error("Failed to delete AntiQuest:", error);
+    }
+  };
+
+  const handleUpdateAntiQuest = async (
+    antiQuestId: string,
+    updates: { title?: string; description?: string; severity?: Severity; tags?: string[] }
+  ) => {
+    if (!userId) return;
+
+    try {
+      const updatedAntiQuest = await antiQuestService.updateAntiQuest(antiQuestId, updates);
+      setAntiQuests((prev) =>
+        prev.map((aq) => (aq.questId === antiQuestId ? updatedAntiQuest : aq))
+      );
+    } catch (error) {
+      console.error("Failed to update AntiQuest:", error);
+      alert(error instanceof Error ? error.message : "Failed to update AntiQuest");
+    }
+  };
+
+  // ========== End AntiQuest Handlers ==========
 
   const startFocusWithModal = async (
     task: Task | Subtask,
@@ -782,6 +932,7 @@ export default function App() {
       {activeNav === "quests" && (
         <QuestsMiddlePanel
           quests={workerQuests}
+          archivedQuests={archivedQuests}
           notifications={notifications}
           onQuestSelect={handleQuestSelect}
           onDiscoverySelect={handleDiscoverySelect}
@@ -790,6 +941,12 @@ export default function App() {
           selectedQuestId={selectedQuestId}
           discoveryMode={discoveryMode}
           createQuestMode={createQuestMode}
+          // AntiQuest props
+          antiQuests={antiQuests}
+          onAntiQuestSelect={handleAntiQuestSelect}
+          selectedAntiQuestId={selectedAntiQuestId}
+          onCreateAntiQuestSelect={handleCreateAntiQuestSelect}
+          createAntiQuestMode={createAntiQuestMode}
         />
       )}
       {activeNav === "progress" && (
@@ -829,6 +986,7 @@ export default function App() {
       {activeNav === "quests" && (
         <QuestsMainPanel
           quests={workerQuests}
+          archivedQuests={archivedQuests}
           tasks={tasks}
           selectedQuestId={selectedQuestId}
           discoveryMode={discoveryMode}
@@ -847,6 +1005,15 @@ export default function App() {
           onDeleteQuest={handleDeleteQuest}
           onArchiveQuest={handleArchiveQuest}
           onUpdateQuest={handleUpdateQuest}
+          // AntiQuest props
+          antiQuests={antiQuests}
+          selectedAntiQuestId={selectedAntiQuestId}
+          onLogOccurrence={handleLogOccurrence}
+          createAntiQuestMode={createAntiQuestMode}
+          onCreateAntiQuest={handleCreateAntiQuest}
+          onCancelAntiQuestCreate={handleCancelAntiQuestCreate}
+          onDeleteAntiQuest={handleDeleteAntiQuest}
+          onUpdateAntiQuest={handleUpdateAntiQuest}
         />
       )}
       {activeNav === "progress" && (

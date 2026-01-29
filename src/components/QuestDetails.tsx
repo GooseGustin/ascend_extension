@@ -40,7 +40,7 @@ interface QuestDetailsProps {
   onStartFocus: (task: Task | Subtask, questTitle: string) => void;
   onToggleSubtask: (questId: string, subtaskId: string) => void;
   onAddComment?: (questId: string, text: string) => void;
-  onAddSubtask: (questId: string, title: string) => void;
+  onAddSubtask: (questId: string, title: string) => void | Promise<void>;
   onDeleteQuest?: (questId: string) => void;
   onArchiveQuest?: (questId: string) => void;
   onUpdateQuest?: (questId: string, updates: Partial<Quest>) => void;
@@ -116,8 +116,8 @@ export function QuestDetails({
     if (!newSubtaskTitle.trim()) return;
 
     try {
-      // Call parent handler
-      onAddSubtask(quest.questId, newSubtaskTitle.trim());
+      // Call parent handler and wait for it to complete
+      await onAddSubtask(quest.questId, newSubtaskTitle.trim());
       setNewSubtaskTitle("");
     } catch (error) {
       console.error("Failed to add subtask:", error);
@@ -371,12 +371,18 @@ export function QuestDetails({
               </div>
             </div>
             <div className="bg-[#2f3136] rounded-lg p-3">
-              <div className="text-xs text-[#b9bbbe] mb-1">Frequency</div>
+              <div className="text-xs text-[#b9bbbe] mb-1">Schedule</div>
               <div className="text-sm text-white font-medium">
-                {quest.schedule.frequency}
+                {quest.schedule.frequency === 'Daily'
+                  ? 'Every day'
+                  : quest.schedule.customDays && quest.schedule.customDays.length > 0
+                    ? quest.schedule.customDays
+                        .map(day => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][day])
+                        .join(', ')
+                    : quest.schedule.frequency}
               </div>
               <div className="text-xs text-[#72767d] mt-1">
-                Target: {quest.schedule.targetCompletionsPerCycle} / cycle
+                {quest.schedule.pomodoroDurationMin}min focus / {quest.schedule.breakDurationMin}min break
               </div>
             </div>
           </div>
