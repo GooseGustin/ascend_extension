@@ -298,11 +298,13 @@ export function MainPanel({
               </div>
 
               <QuestSelectDropdown
-                quests={workerQuests.map((q) => ({
-                  questId: q.questId,
-                  title: q.title,
-                  color: q.color,
-                }))}
+                quests={workerQuests
+                  .filter((q) => q.type !== 'AntiQuest') // Exclude AntiQuests
+                  .map((q) => ({
+                    questId: q.questId,
+                    title: q.title,
+                    color: q.color,
+                  }))}
                 selectedQuestId={selectedQuestId || null}
                 onSelect={(questId) => {
                   setSelectedQuestId(questId);

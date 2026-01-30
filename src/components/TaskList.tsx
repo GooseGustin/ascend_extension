@@ -1,9 +1,9 @@
-import { React, useEffect } from 'react';
-import { useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { GripVertical, Play, Check } from 'lucide-react';
 import { Checkbox } from './ui/checkbox';
 import type { Task } from '../App';
-import { getTaskService } from '../worker';
+import { getTaskService, AuthService } from '../worker';
+import { saveHomeTaskOrder } from '../worker/utils/task-order-storage';
 
 interface TaskListProps {
   tasks: Task[];
@@ -13,25 +13,15 @@ interface TaskListProps {
 }
 
 export function TaskList({ tasks, onToggleTask, onReorderTasks, onStartFocus }: TaskListProps) {
-
-  // useEffect(() => {
-  // async function saveOrder() {
-  //   try {
-  //     const taskService = getTaskService();
-  //     await taskService.saveTaskOrder(tasks.map(t => t.id));
-  //   } catch (error) {
-  //     console.error('Failed to save task order:', error);
-  //   }
-  // }s
-  
-//   // Save whenever tasks change
-//   if (tasks.length > 0) {
-//     saveOrder();
-//   }
-// }, [tasks]);
-
+  // Local state for optimistic reordering
+  const [localTasks, setLocalTasks] = useState<Task[]>(tasks);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+
+  // Sync local state when tasks prop changes
+  useEffect(() => {
+    setLocalTasks(tasks);
+  }, [tasks]);
 
   const handleDragStart = (index: number) => {
     setDraggedIndex(index);
@@ -39,17 +29,48 @@ export function TaskList({ tasks, onToggleTask, onReorderTasks, onStartFocus }: 
 
   const handleDragOver = (e: React.DragEvent, index: number) => {
     e.preventDefault();
-    setDragOverIndex(index);
+    if (draggedIndex !== null && draggedIndex !== index) {
+      setDragOverIndex(index);
+    }
   };
 
-  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+  const handleDrop = async (e: React.DragEvent, dropIndex: number) => {
     e.preventDefault();
-    console.log('\n\nDrop event:', { draggedIndex, dropIndex });
-    if (draggedIndex !== null && draggedIndex !== dropIndex) {
-      onReorderTasks(draggedIndex, dropIndex);
+
+    if (draggedIndex === null || draggedIndex === dropIndex) {
+      setDraggedIndex(null);
+      setDragOverIndex(null);
+      return;
     }
+
+    // Optimistic update - reorder locally first
+    const reordered = Array.from(localTasks);
+    const [removed] = reordered.splice(draggedIndex, 1);
+    reordered.splice(dropIndex, 0, removed);
+
+    setLocalTasks(reordered);
     setDraggedIndex(null);
     setDragOverIndex(null);
+
+    // Notify parent of the reorder
+    onReorderTasks(draggedIndex, dropIndex);
+
+    // Persist to storage
+    try {
+      const authService = new AuthService();
+      const userId = await authService.getCurrentUserId();
+
+      const orderItems = reordered.map(t => ({
+        taskId: t.id,
+        questId: t.questId,
+      }));
+
+      saveHomeTaskOrder(userId, orderItems);
+    } catch (error) {
+      console.error('Failed to save task order:', error);
+      // Revert on error
+      setLocalTasks(tasks);
+    }
   };
 
   const handleDragEnd = () => {
@@ -59,7 +80,7 @@ export function TaskList({ tasks, onToggleTask, onReorderTasks, onStartFocus }: 
 
   return (
     <div className="space-y-2">
-      {tasks.map((task, index) => (
+      {localTasks.map((task, index) => (
         <div
           key={task.id}
           draggable
@@ -68,12 +89,13 @@ export function TaskList({ tasks, onToggleTask, onReorderTasks, onStartFocus }: 
           onDrop={(e) => handleDrop(e, index)}
           onDragEnd={handleDragEnd}
           className={`
-            group bg-[#2f3136] rounded px-3 py-3 flex items-center gap-3 cursor-move
+            border group bg-[#2f3136] rounded px-3 py-3 flex items-center gap-3 cursor-move
             hover:bg-[#34373c] transition-colors
             ${draggedIndex === index ? 'opacity-50' : ''}
-            ${dragOverIndex === index && draggedIndex !== index ? 'border-t-2 border-[#5865F2]' : ''}
+            ${dragOverIndex === index && draggedIndex !== index ? 'border-t-2' : ''}
             ${task.completed ? 'opacity-60' : ''}
           `}
+          style={{ borderColor: task.questColor }}
         >
           {/* Drag Handle */}
           <GripVertical className="w-4 h-4 text-[#4f545c] group-hover:text-[#72767d] shrink-0" />

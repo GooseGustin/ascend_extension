@@ -157,7 +157,7 @@ export function ProductivitySection({ settings, onUpdate }: ProductivitySectionP
             />
           </div>
 
-          <div>
+          {/* <div>
             <Label htmlFor="deepFocusXP" className="text-[#b9bbbe]">
               XP Rate Multiplier
             </Label>
@@ -185,7 +185,7 @@ export function ProductivitySection({ settings, onUpdate }: ProductivitySectionP
               }}
               className="mt-2 bg-[#202225] border-[#202225] text-[#dcddde] max-w-xs"
             />
-          </div>
+          </div> */}
         </div>
       </div>
 

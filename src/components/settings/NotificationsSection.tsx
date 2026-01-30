@@ -31,17 +31,68 @@ export function NotificationsSection({ settings, onUpdate }: NotificationsSectio
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <Label className="text-[#dcddde]">Daily Summary Notification</Label>
-          <p className="text-sm text-[#72767d] mt-1">
-            Receive a daily summary of your progress
-          </p>
+      {/* Session Notifications Section */}
+      <div className="space-y-4">
+        <h3 className="text-sm font-medium text-[#dcddde] uppercase tracking-wider">Session Notifications</h3>
+
+        <div className="flex items-center justify-between">
+          <div>
+            <Label className="text-[#dcddde]">Session End Popup</Label>
+            <p className="text-sm text-[#72767d] mt-1">
+              Show a system notification when focus session ends
+            </p>
+          </div>
+          <ToggleSwitch
+            checked={settings.notifications.sessionEndPopup ?? true}
+            onCheckedChange={(checked) => handleToggle('sessionEndPopup', checked)}
+          />
         </div>
-        <ToggleSwitch
-          checked={settings.notifications.dailySummary}
-          onCheckedChange={(checked) => handleToggle('dailySummary', checked)}
-        />
+
+        <div className="flex items-center justify-between">
+          <div>
+            <Label className="text-[#dcddde]">Break End Popup</Label>
+            <p className="text-sm text-[#72767d] mt-1">
+              Show a system notification when break ends
+            </p>
+          </div>
+          <ToggleSwitch
+            checked={settings.notifications.breakEndPopup ?? true}
+            onCheckedChange={(checked) => handleToggle('breakEndPopup', checked)}
+          />
+        </div>
+
+        <div className="flex items-center justify-between">
+          <div>
+            <Label className="text-[#dcddde]">Notification Sound</Label>
+            <p className="text-sm text-[#72767d] mt-1">
+              Play a sound when session or break ends
+            </p>
+          </div>
+          <ToggleSwitch
+            checked={settings.notifications.soundEnabled ?? true}
+            onCheckedChange={(checked) => handleToggle('soundEnabled', checked)}
+          />
+        </div>
+      </div>
+
+      <Separator className="bg-[#202225]" />
+
+      {/* General Notifications Section */}
+      <div className="space-y-4">
+        <h3 className="text-sm font-medium text-[#dcddde] uppercase tracking-wider">General Notifications</h3>
+
+        <div className="flex items-center justify-between">
+          <div>
+            <Label className="text-[#dcddde]">Daily Summary Notification</Label>
+            <p className="text-sm text-[#72767d] mt-1">
+              Receive a daily summary of your progress
+            </p>
+          </div>
+          <ToggleSwitch
+            checked={settings.notifications.dailySummary}
+            onCheckedChange={(checked) => handleToggle('dailySummary', checked)}
+          />
+        </div>
       </div>
 
       {settings.notifications.dailySummary && (

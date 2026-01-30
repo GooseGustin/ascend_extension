@@ -13,6 +13,9 @@ export interface UserSettings {
     taskReminders: boolean;
     questReminders: boolean;
     aiNudges: boolean;
+    sessionEndPopup: boolean; // Windows/browser notification on session end
+    breakEndPopup: boolean; // Windows/browser notification on break end
+    soundEnabled: boolean; // Play sound on session/break end
   };
   
   // Appearance
@@ -89,6 +92,9 @@ export const DEFAULT_USER_SETTINGS: Omit<UserSettings, 'userId'> = {
     taskReminders: true,
     questReminders: true,
     aiNudges: true,
+    sessionEndPopup: true,
+    breakEndPopup: true,
+    soundEnabled: true,
   },
   appearance: {
     theme: 'dark',

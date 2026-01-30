@@ -395,7 +395,7 @@ export function AntiQuestDetails({
                           <div className="text-xs text-[#72767d]">{formatDate(occurrence.timestamp)}</div>
                         </div>
                         <div className="text-sm text-[#ed4245] font-semibold">
-                          -{occurrence.actualPenalty || occurrence.xpPenalty} XP
+                          -{Math.ceil(occurrence.actualPenalty || occurrence.xpPenalty)} XP
                         </div>
                       </div>
                       {occurrence.notes && (

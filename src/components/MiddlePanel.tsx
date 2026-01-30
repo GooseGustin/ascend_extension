@@ -230,7 +230,7 @@ export function MiddlePanel({ userId }: MiddlePanelProps) {
               >
                 <p className="text-sm text-[#dcddde]">
                   {activity.type === "level_up" &&
-                    `Reached Level ${activity.data.level}`}
+                    `Reached Level ${activity.data.level} in ${activity.data.questTitle}`}
                   {activity.type === "quest_complete" &&
                     `Completed "${activity.data.questTitle}"`}
                   {activity.type === "quest_create" &&

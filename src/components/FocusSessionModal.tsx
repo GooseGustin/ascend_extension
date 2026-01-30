@@ -4,6 +4,11 @@ import { Button } from './ui/button';
 import type { FocusSession, Task } from '../App';
 import { SessionService } from '../worker';
 import type { Quest } from '../worker/models/Quest';
+import {
+  requestNotificationPermission,
+  notifySessionEnd,
+  notifyBreakEnd,
+} from '../worker/utils/session-notifications';
 
 interface FocusSessionModalProps {
   session: FocusSession;
@@ -34,6 +39,23 @@ export function FocusSessionModal({
   const [deepFocusMaxSeconds, setDeepFocusMaxSeconds] = useState(7200); // Default 2 hours, will load from settings
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Notification settings
+  const [notificationSettings, setNotificationSettings] = useState({
+    sessionEndPopup: true,
+    breakEndPopup: true,
+    soundEnabled: true,
+  });
+
+  // Pomodoro settings
+  const [pomodoroSettings, setPomodoroSettings] = useState({
+    autoStartBreak: true,
+    autoStartNext: false,
+    breakDuration: 5, // minutes
+  });
+
+  // Track if current session has been completed (to avoid double-completion)
+  const [sessionCompleted, setSessionCompleted] = useState(false);
+
   // Time-based tracking (instead of tick-based) to persist across window minimize
   const sessionStartTimeRef = useRef<number>(Date.now());
   const pausedAtRef = useRef<number | null>(null);
@@ -49,6 +71,25 @@ export function FocusSessionModal({
         const userSettings = await settingsService.getUserSettings(userId);
         const deepFocusMaxMin = userSettings.productivity.deepFocus.maxDurationMin;
         setDeepFocusMaxSeconds(deepFocusMaxMin * 60); // Convert min to sec
+
+        // Load notification settings
+        setNotificationSettings({
+          sessionEndPopup: userSettings.notifications.sessionEndPopup ?? true,
+          breakEndPopup: userSettings.notifications.breakEndPopup ?? true,
+          soundEnabled: userSettings.notifications.soundEnabled ?? true,
+        });
+
+        // Load pomodoro settings
+        setPomodoroSettings({
+          autoStartBreak: userSettings.productivity.pomodoro.autoStartBreak ?? true,
+          autoStartNext: userSettings.productivity.pomodoro.autoStartNext ?? false,
+          breakDuration: userSettings.productivity.pomodoro.breakDuration ?? 5,
+        });
+
+        // Request notification permission if popups are enabled
+        if (userSettings.notifications.sessionEndPopup || userSettings.notifications.breakEndPopup) {
+          await requestNotificationPermission();
+        }
 
         // Initialize timer start time
         sessionStartTimeRef.current = Date.now();
@@ -111,34 +152,125 @@ export function FocusSessionModal({
   const handlePomodoroComplete = async () => {
     if (!currentSessionId) return;
 
-    // When timer reaches 0, switch to completion state
-    setSessionMode('session_complete');
-    setTimeRemaining(0);
-    setIsPaused(true);
-    console.log('Pomodoro timer complete - waiting for user action');
+    console.log('Pomodoro timer complete');
+
+    // 1. Complete the current session
+    try {
+      const actualMinutes = Math.ceil(session.duration / 60); // Full duration completed
+      const result = await sessionService.completeSession(
+        currentSessionId,
+        actualMinutes,
+        'Session completed'
+      );
+      setSessionCompleted(true);
+      console.log(`[FocusSessionModal] ✅ Session completed! +${result.xpAwarded} XP`);
+    } catch (error) {
+      console.error('Failed to complete session:', error);
+    }
+
+    // 2. Trigger notification (sound + popup)
+    await notifySessionEnd(quest.title, {
+      popup: notificationSettings.sessionEndPopup,
+      sound: notificationSettings.soundEnabled,
+    });
+
+    // 3. Check if auto-start break is enabled
+    if (pomodoroSettings.autoStartBreak) {
+      // Auto-start break timer - use quest's break duration, fallback to settings
+      console.log('Auto-starting break timer...');
+      const breakDurationMin = quest.schedule?.breakDurationMin || pomodoroSettings.breakDuration;
+      const breakDurationSeconds = breakDurationMin * 60;
+
+      setSessionMode('break');
+      setTimeRemaining(breakDurationSeconds);
+
+      // Reset timer tracking for break
+      sessionStartTimeRef.current = Date.now();
+      totalPausedTimeRef.current = 0;
+      initialDurationRef.current = breakDurationSeconds;
+
+      setIsPaused(false);
+      console.log(`[FocusSessionModal] ✅ Break started for ${breakDurationMin} minutes`);
+    } else {
+      // Show session complete state and wait for user action
+      setSessionMode('session_complete');
+      setTimeRemaining(0);
+      setIsPaused(true);
+      console.log('Pomodoro timer complete - waiting for user action');
+    }
   };
 
   const handleBreakComplete = async () => {
-    // Set to session_complete mode - keep modal open and wait for user action
-    setSessionMode('session_complete');
-    setTimeRemaining(0);
-    setIsPaused(true); // Stop the timer
-    console.log('Break complete! Waiting for user to start new session or close.');
+    console.log('Break complete!');
+
+    // Trigger notification first
+    await notifyBreakEnd(quest.title, {
+      popup: notificationSettings.breakEndPopup,
+      sound: notificationSettings.soundEnabled,
+    });
+
+    // Check if auto-start next session is enabled
+    if (pomodoroSettings.autoStartNext) {
+      console.log('Auto-starting next pomodoro session...');
+      try {
+        // Create a new session for the same quest/subtask
+        const subtaskId = tasks.find((t) => t.title === session.subtaskName)?.id || null;
+        const newSession = await sessionService.createSession(
+          userId,
+          quest.questId,
+          subtaskId,
+          quest.schedule.pomodoroDurationMin,
+          'pomodoro'
+        );
+        console.log('[FocusSessionModal] ✅ New session created:', newSession.sessionId);
+
+        // Reset state for new session
+        setCurrentSessionId(newSession.sessionId);
+        setSessionMode('pomodoro');
+        setSessionCompleted(false);
+        const sessionDuration = quest.schedule.pomodoroDurationMin * 60;
+        setTimeRemaining(sessionDuration);
+
+        // Reset timer tracking
+        sessionStartTimeRef.current = Date.now();
+        totalPausedTimeRef.current = 0;
+        initialDurationRef.current = sessionDuration;
+
+        setIsPaused(false);
+        console.log('[FocusSessionModal] ✅ Auto-started new pomodoro session!');
+      } catch (error) {
+        console.error('Failed to auto-start new session:', error);
+        // Fall back to session_complete state
+        setSessionMode('session_complete');
+        setTimeRemaining(0);
+        setIsPaused(true);
+      }
+    } else {
+      // Set to session_complete mode - keep modal open and wait for user action
+      setSessionMode('session_complete');
+      setTimeRemaining(0);
+      setIsPaused(true);
+      console.log('Waiting for user to start new session or close.');
+    }
   };
 
   const handleStartNewSession = async () => {
     try {
-      // Complete the current session
-      const actualMinutes = Math.ceil(session.duration / 60); // Full duration
-      const notes = 'Session completed';
+      // Complete the current session only if not already completed (e.g., after auto-break)
+      if (!sessionCompleted) {
+        const actualMinutes = Math.ceil(session.duration / 60); // Full duration
+        const notes = 'Session completed';
 
-      console.log('[FocusSessionModal] Completing current session...');
-      const result = await sessionService.completeSession(
-        currentSessionId,
-        actualMinutes,
-        notes
-      );
-      console.log(`[FocusSessionModal] ✅ Session completed! +${result.xpAwarded} XP`);
+        console.log('[FocusSessionModal] Completing current session...');
+        const result = await sessionService.completeSession(
+          currentSessionId,
+          actualMinutes,
+          notes
+        );
+        console.log(`[FocusSessionModal] ✅ Session completed! +${result.xpAwarded} XP`);
+      } else {
+        console.log('[FocusSessionModal] Session already completed, skipping...');
+      }
 
       // Create a new session for the same quest/subtask
       console.log('[FocusSessionModal] Creating new session...');
@@ -155,6 +287,7 @@ export function FocusSessionModal({
       // Reset state for new session
       setCurrentSessionId(newSession.sessionId);
       setSessionMode('pomodoro');
+      setSessionCompleted(false); // Reset completion flag for new session
       const sessionDuration = quest.schedule.pomodoroDurationMin * 60;
       setTimeRemaining(sessionDuration);
 
@@ -226,6 +359,13 @@ export function FocusSessionModal({
   const handleEndSession = async () => {
     if (!currentSessionId) return;
     try {
+      // If session already completed (after auto-break), just close the modal
+      if (sessionCompleted) {
+        console.log('[FocusSessionModal] Session already completed, closing modal');
+        onEnd(currentSessionId, 0, 'Session already completed');
+        return;
+      }
+
       let actualMinutes = 0;
 
       if (sessionMode === 'deep_focus') {
