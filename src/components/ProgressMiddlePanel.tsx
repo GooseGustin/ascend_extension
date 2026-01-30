@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import { ChevronDown, ChevronRight, Info } from 'lucide-react';
 
 interface ProgressMiddlePanelProps {
   selectedView: string;
@@ -11,6 +11,7 @@ export function ProgressMiddlePanel({ selectedView, onViewSelect }: ProgressMidd
     overview: true,
     timeBreakdown: true,
     performance: true,
+    antiQuestAnalysis: true,
     logs: true,
   });
 
@@ -104,6 +105,35 @@ export function ProgressMiddlePanel({ selectedView, onViewSelect }: ProgressMidd
               <ViewButton id="best-quests" label="Best Quests" indent />
               <ViewButton id="weak-quests" label="Weak Quests" indent />
               <ViewButton id="completion-trends" label="Completion Trends" indent />
+            </div>
+          )}
+        </div>
+
+        {/* Anti-Quest Analysis Category */}
+        <div className="border-b border-[#202225]">
+          <button
+            onClick={() => toggleSection('antiQuestAnalysis')}
+            className="w-full px-3 py-2 flex items-center gap-2 hover:bg-[#34373c] transition-colors group relative"
+          >
+            {expandedSections.antiQuestAnalysis ? (
+              <ChevronDown className="w-4 h-4 text-[#b9bbbe]" />
+            ) : (
+              <ChevronRight className="w-4 h-4 text-[#b9bbbe]" />
+            )}
+            <span className="text-xs uppercase tracking-wide text-[#b9bbbe]">Anti-Quest Analysis</span>
+            <div className="ml-auto relative group/info">
+              <Info className="w-3 h-3 text-[#72767d] hover:text-[#dcddde] transition-colors" />
+              <div className="hidden group-hover/info:block absolute right-0 top-6 w-64 bg-[#18191c] border border-[#4f545c] rounded p-3 text-xs text-[#dcddde] z-50 shadow-xl">
+                AntiQuests represent recurring behaviors that reduce progress. Analytics are shown in aggregate to highlight patterns, not incidents.
+              </div>
+            </div>
+          </button>
+          {expandedSections.antiQuestAnalysis && (
+            <div>
+              <ViewButton id="aq-overview" label="Overview" indent />
+              <ViewButton id="aq-trends" label="Trends" indent />
+              <ViewButton id="aq-impact" label="Impact" indent />
+              <ViewButton id="aq-gaps" label="Gaps" indent />
             </div>
           )}
         </div>

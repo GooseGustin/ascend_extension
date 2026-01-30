@@ -9,6 +9,7 @@ import type { GoalComment } from "../models/GoalComment";
 import { AuthService } from "./auth.service";
 import { GMService } from "./gm/gm.service"; //
 import { AnalyticsService } from "./analytics.service"; //
+import { ActivityFeedService } from "./activity-feed.service";
 
 export class QuestService {
   private db = getDB();
@@ -521,6 +522,23 @@ export class QuestService {
     }
 
     console.log(`[QuestService] Quest creation completed: ${questId}`);
+
+    // Log activity for quest creation (userProfile already fetched earlier in this function)
+    if (userProfile) {
+      const activityService = new ActivityFeedService();
+      await activityService.addActivity({
+        activityId: `quest_create_${questId}`,
+        type: 'quest_create',
+        userId,
+        username: userProfile.username,
+        timestamp: new Date().toISOString(),
+        data: {
+          questId,
+          questTitle: quest.title
+        }
+      });
+    }
+
     return quest;
   }
 

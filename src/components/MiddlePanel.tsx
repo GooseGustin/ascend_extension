@@ -233,6 +233,16 @@ export function MiddlePanel({ userId }: MiddlePanelProps) {
                     `Reached Level ${activity.data.level}`}
                   {activity.type === "quest_complete" &&
                     `Completed "${activity.data.questTitle}"`}
+                  {activity.type === "quest_create" &&
+                    `Created quest "${activity.data.questTitle}"`}
+                  {activity.type === "antiquest_create" &&
+                    `Created antiquest "${activity.data.antiQuestTitle}"`}
+                  {activity.type === "task_complete" &&
+                    `Completed task "${activity.data.taskTitle}"`}
+                  {activity.type === "xp_earned" &&
+                    `Earned +${activity.data.xpEarned} XP from "${activity.data.questTitle}"`}
+                  {activity.type === "xp_deduction" &&
+                    `Lost -${activity.data.xpDeducted} XP from "${activity.data.antiQuestTitle}"`}
                   {activity.type === "streak_milestone" &&
                     `${activity.data.streakDays}-day streak!`}
                 </p>

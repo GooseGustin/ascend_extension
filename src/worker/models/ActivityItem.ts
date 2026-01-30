@@ -3,9 +3,14 @@
  * Unified activity feed item structure
  */
 
-export type ActivityType = 
+export type ActivityType =
   | 'level_up'
   | 'quest_complete'
+  | 'quest_create'
+  | 'antiquest_create'
+  | 'task_complete'
+  | 'xp_earned'
+  | 'xp_deduction'
   | 'dungeon_clear'
   | 'comment'
   | 'streak_milestone'
@@ -23,6 +28,9 @@ export interface ActivityItem {
     questId?: string;
     questTitle?: string;
     xpEarned?: number;
+    xpDeducted?: number;
+    taskTitle?: string;
+    antiQuestTitle?: string;
     dungeonId?: string;
     participants?: string[];
     fromUser?: string;

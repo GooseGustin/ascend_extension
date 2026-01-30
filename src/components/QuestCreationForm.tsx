@@ -127,13 +127,13 @@ export function QuestCreationForm({
       description: "Personal quest",
       color: "#5865F2",
     },
-    {
-      value: "dungeon",
-      label: "Dungeon",
-      icon: Users,
-      description: "Team collaboration",
-      color: "#ED4245",
-    },
+    // {
+    //   value: "dungeon",
+    //   label: "Dungeon",
+    //   icon: Users,
+    //   description: "Team collaboration",
+    //   color: "#ED4245",
+    // },
     {
       value: "guild",
       label: "Todo Quest",
@@ -333,7 +333,7 @@ export function QuestCreationForm({
                 <label className="block text-sm text-[#b9bbbe] mb-3">
                   Quest Type
                 </label>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                   {questTypeOptions.map((option) => {
                     const Icon = option.icon;
                     return (

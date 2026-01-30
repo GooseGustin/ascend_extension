@@ -9,6 +9,7 @@ import type { Quest } from "../models/Quest";
 import type { TaskOrder, TaskOrderItem } from "../models/TaskOrder";
 import { AuthService } from "./auth.service";
 import { Task } from "../../App";
+import { ActivityFeedService } from "./activity-feed.service";
 
 export class TaskService {
   private db = getDB();
@@ -379,6 +380,41 @@ export class TaskService {
       retries: 0,
       error: null,
     });
+
+    // Log activity for task completion (only when marking complete, not unchecking)
+    if (!wasComplete && subtask.isComplete) {
+      const userProfile = await this.db.users.get(userId);
+      if (userProfile) {
+        const activityService = new ActivityFeedService();
+        await activityService.addActivity({
+          activityId: `task_complete_${subtaskId}`,
+          type: 'task_complete',
+          userId,
+          username: userProfile.username,
+          timestamp: new Date().toISOString(),
+          data: {
+            questId,
+            questTitle: quest.title,
+            taskTitle: subtask.title
+          }
+        });
+
+        // Also log quest completion if all tasks are done
+        if (allSubtasksComplete) {
+          await activityService.addActivity({
+            activityId: `quest_complete_${questId}`,
+            type: 'quest_complete',
+            userId,
+            username: userProfile.username,
+            timestamp: new Date().toISOString(),
+            data: {
+              questId,
+              questTitle: quest.title
+            }
+          });
+        }
+      }
+    }
 
     return quest;
   }

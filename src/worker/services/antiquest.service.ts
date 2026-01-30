@@ -13,6 +13,7 @@ import { getDB } from "../db/indexed-db";
 import type { Quest, Severity, AntiQuestOccurrence, AntiQuestTracking } from "../models/Quest";
 import { AuthService } from "./auth.service";
 import { applyXPPenaltyWithFloor } from "../utils/level-and-xp-converters";
+import { ActivityFeedService } from "./activity-feed.service";
 
 // XP Penalties by severity
 const SEVERITY_XP_PENALTIES: Record<Severity, number> = {
@@ -182,6 +183,24 @@ export class AntiQuestService {
     });
 
     console.log(`[AntiQuestService] Created AntiQuest: ${antiQuestId}`);
+
+    // Log activity for antiquest creation
+    const userProfile = await this.db.users.get(userId);
+    if (userProfile) {
+      const activityService = new ActivityFeedService();
+      await activityService.addActivity({
+        activityId: `antiquest_create_${antiQuestId}`,
+        type: 'antiquest_create',
+        userId,
+        username: userProfile.username,
+        timestamp: new Date().toISOString(),
+        data: {
+          questId: antiQuestId,
+          antiQuestTitle: antiQuest.title
+        }
+      });
+    }
+
     return antiQuest;
   }
 
@@ -284,6 +303,21 @@ export class AntiQuestService {
     });
 
     console.log(`[AntiQuestService] Logged occurrence for ${antiQuestId}: -${xpResult.actualPenalty} XP (requested: -${antiQuest.severity.xpPenaltyPerEvent})`);
+
+    // Log activity for XP deduction
+    const activityService = new ActivityFeedService();
+    await activityService.addActivity({
+      activityId: `xp_deduction_${occurrence.id}`,
+      type: 'xp_deduction',
+      userId,
+      username: user.username,
+      timestamp: new Date().toISOString(),
+      data: {
+        questId: antiQuestId,
+        antiQuestTitle: antiQuest.title,
+        xpDeducted: xpResult.actualPenalty
+      }
+    });
 
     return { antiQuest, occurrence, xpResult };
   }
@@ -466,8 +500,6 @@ export class AntiQuestService {
     });
   }
 
-
-
   /**
    * Get XP penalty for a severity level
    */
@@ -484,196 +516,4 @@ export function getAntiQuestService(): AntiQuestService {
     _antiQuestServiceInstance = new AntiQuestService();
   }
   return _antiQuestServiceInstance;
-}
-
-/**
- * Calculate comprehensive analytics for an AntiQuest
- */
-export async function calculateAntiQuestAnalytics(
-  questId: string,
-  timeRange: '7d' | '30d' | '90d' | 'all' = 'all'
-): Promise<AntiQuestAnalytics> {
-  const quest = await getQuestById(questId);
-  
-  if (!quest || quest.type !== 'AntiQuest') {
-    throw new Error('Quest is not an AntiQuest');
-  }
-
-  const occurrences = quest.antiQuestData?.occurrences || [];
-  
-  // Filter occurrences based on time range
-  const now = Date.now();
-  const cutoffMap = {
-    '7d': now - 7 * 24 * 60 * 60 * 1000,
-    '30d': now - 30 * 24 * 60 * 60 * 1000,
-    '90d': now - 90 * 24 * 60 * 60 * 1000,
-    'all': 0
-  };
-  
-  const filteredOccurrences = occurrences.filter(
-    occ => new Date(occ.timestamp).getTime() >= cutoffMap[timeRange]
-  );
-
-  // Calculate gaps between occurrences
-  const gaps = calculateGaps(filteredOccurrences);
-  
-  // Calculate trends
-  const trends = calculateTrends(filteredOccurrences, gaps);
-
-  return {
-    totalOccurrences: filteredOccurrences.length,
-    totalXPLost: filteredOccurrences.reduce((sum, occ) => sum + (occ.actualPenalty || occ.xpPenalty), 0),
-    avgGap: gaps.length > 0 ? gaps.reduce((a, b) => a + b, 0) / gaps.length : 0,
-    longestGap: gaps.length > 0 ? Math.max(...gaps) : 0,
-    currentGapDays: quest.antiQuestData?.tracking?.currentGapDays || 0,
-    gaps,
-    trends,
-    occurrencesByDay: groupOccurrencesByDay(filteredOccurrences),
-    xpLossByDay: calculateXPLossByDay(filteredOccurrences)
-  };
-}
-
-/**
- * Calculate gaps between occurrences in days
- */
-function calculateGaps(occurrences: AntiQuestOccurrence[]): number[] {
-  if (occurrences.length < 2) return [];
-  
-  const sorted = [...occurrences].sort(
-    (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-  );
-  
-  const gaps: number[] = [];
-  for (let i = 1; i < sorted.length; i++) {
-    const prevTime = new Date(sorted[i - 1].timestamp).getTime();
-    const currTime = new Date(sorted[i].timestamp).getTime();
-    const gapDays = (currTime - prevTime) / (1000 * 60 * 60 * 24);
-    gaps.push(gapDays);
-  }
-  
-  return gaps;
-}
-
-/**
- * Calculate trend indicators
- */
-function calculateTrends(
-  occurrences: AntiQuestOccurrence[],
-  gaps: number[]
-): {
-  occurrenceTrend: number;
-  xpLossTrend: number;
-  gapTrend: number;
-} {
-  const now = Date.now();
-  const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
-  const sixtyDaysAgo = now - 60 * 24 * 60 * 60 * 1000;
-  
-  const recent = occurrences.filter(
-    occ => new Date(occ.timestamp).getTime() >= thirtyDaysAgo
-  );
-  const previous = occurrences.filter(
-    occ => {
-      const time = new Date(occ.timestamp).getTime();
-      return time >= sixtyDaysAgo && time < thirtyDaysAgo;
-    }
-  );
-  
-  // Occurrence trend (negative is good - fewer occurrences)
-  const occurrenceTrend = previous.length > 0
-    ? ((recent.length - previous.length) / previous.length) * 100
-    : 0;
-  
-  // XP loss trend (negative is good - less XP lost)
-  const recentXP = recent.reduce((sum, occ) => sum + (occ.actualPenalty || occ.xpPenalty), 0);
-  const previousXP = previous.reduce((sum, occ) => sum + (occ.actualPenalty || occ.xpPenalty), 0);
-  const xpLossTrend = previousXP > 0
-    ? ((recentXP - previousXP) / previousXP) * 100
-    : 0;
-  
-  // Gap trend (positive is good - longer gaps)
-  const recentGaps = gaps.slice(-5);
-  const previousGaps = gaps.slice(-10, -5);
-  const avgRecentGap = recentGaps.length > 0
-    ? recentGaps.reduce((a, b) => a + b, 0) / recentGaps.length
-    : 0;
-  const avgPreviousGap = previousGaps.length > 0
-    ? previousGaps.reduce((a, b) => a + b, 0) / previousGaps.length
-    : 0;
-  const gapTrend = avgPreviousGap > 0
-    ? ((avgRecentGap - avgPreviousGap) / avgPreviousGap) * 100
-    : 0;
-  
-  return { occurrenceTrend, xpLossTrend, gapTrend };
-}
-
-/**
- * Group occurrences by day for frequency chart
- */
-function groupOccurrencesByDay(occurrences: AntiQuestOccurrence[]): Array<{
-  date: string;
-  count: number;
-}> {
-  const grouped = new Map<string, number>();
-  
-  occurrences.forEach(occ => {
-    const date = new Date(occ.timestamp).toISOString().split('T')[0];
-    grouped.set(date, (grouped.get(date) || 0) + 1);
-  });
-  
-  return Array.from(grouped.entries())
-    .map(([date, count]) => ({ date, count }))
-    .sort((a, b) => a.date.localeCompare(b.date));
-}
-
-/**
- * Calculate XP loss by day for area chart
- */
-function calculateXPLossByDay(occurrences: AntiQuestOccurrence[]): Array<{
-  date: string;
-  xpLoss: number;
-}> {
-  const grouped = new Map<string, number>();
-  
-  occurrences.forEach(occ => {
-    const date = new Date(occ.timestamp).toISOString().split('T')[0];
-    const xp = occ.actualPenalty || occ.xpPenalty;
-    grouped.set(date, (grouped.get(date) || 0) + xp);
-  });
-  
-  return Array.from(grouped.entries())
-    .map(([date, xpLoss]) => ({ date, xpLoss }))
-    .sort((a, b) => a.date.localeCompare(b.date));
-}
-
-/**
- * Get gap timeline data for visualization
- */
-export async function getAntiQuestGapTimeline(
-  questId: string,
-  timeRange: '7d' | '30d' | '90d' | 'all' = 'all'
-): Promise<Array<{
-  date: string;
-  gap: number;
-  improving: boolean;
-}>> {
-  const analytics = await calculateAntiQuestAnalytics(questId, timeRange);
-  const { gaps } = analytics;
-  
-  if (gaps.length === 0) return [];
-  
-  const quest = await getQuestById(questId);
-  const occurrences = quest?.antiQuestData?.occurrences || [];
-  
-  return gaps.map((gap, index) => {
-    const prevGap = index > 0 ? gaps[index - 1] : gap;
-    const improving = gap > prevGap;
-    const occurrenceDate = occurrences[index + 1]?.timestamp || new Date().toISOString();
-    
-    return {
-      date: new Date(occurrenceDate).toISOString().split('T')[0],
-      gap,
-      improving
-    };
-  });
 }

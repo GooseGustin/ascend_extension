@@ -324,6 +324,52 @@ export function QuestsMiddlePanel({
           )}
         </div>
 
+        {/* Anti Quests (Collapsible) */}
+        <div className="border-b border-[#202225]">
+          <button
+            onClick={() => toggleSection('antiQuests')}
+            className="w-full px-3 py-2 flex items-center gap-2 hover:bg-[#34373c] transition-colors"
+          >
+            {expandedSections.antiQuests ? (
+              <ChevronDown className="w-4 h-4 text-[#b9bbbe]" />
+            ) : (
+              <ChevronRight className="w-4 h-4 text-[#b9bbbe]" />
+            )}
+            <AlertTriangle className="w-4 h-4 text-[#ed4245]" />
+            <span className="text-xs uppercase tracking-wide text-[#b9bbbe]">Anti Quests</span>
+            <span className="text-xs text-[#72767d] ml-auto">{filteredAntiQuests.length}</span>
+          </button>
+
+          {expandedSections.antiQuests && (
+            <div className="px-2 pb-2 space-y-1">
+              {/* Create New AntiQuest Button - matches Create New Quest styling */}
+              {onCreateAntiQuestSelect && (
+                <button
+                  onClick={onCreateAntiQuestSelect}
+                  className={`
+                    w-full px-3 py-3 flex items-center gap-2 transition-all
+                    ${createAntiQuestMode ? 'bg-[#ed4245] bg-opacity-20 border-l-4 border-[#ed4245]' : 'hover:bg-[#ed4245] hover:bg-opacity-10'}
+                  `}
+                >
+                  <div className="w-6 h-6 rounded-full bg-[#ed4245] flex items-center justify-center">
+                    <Plus className="w-4 h-4 text-white" />
+                  </div>
+                  <span className="text-sm text-white">Create New AntiQuest</span>
+                </button>
+              )}
+
+              {filteredAntiQuests.map(antiQuest => (
+                <AntiQuestItem key={antiQuest.questId} antiQuest={antiQuest} />
+              ))}
+              {filteredAntiQuests.length === 0 && (
+                <div className="px-2 py-3 text-xs text-[#72767d] text-center">
+                  No anti quests yet
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
         {/* Discover (Link-like, not collapsible) */}
         <div className="border-b border-[#202225]">
           <button
@@ -392,52 +438,6 @@ export function QuestsMiddlePanel({
               {filteredArchived.length === 0 && (
                 <div className="px-2 py-3 text-xs text-[#72767d] text-center">
                   No archived quests
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Anti Quests (Collapsible) */}
-        <div className="border-b border-[#202225]">
-          <button
-            onClick={() => toggleSection('antiQuests')}
-            className="w-full px-3 py-2 flex items-center gap-2 hover:bg-[#34373c] transition-colors"
-          >
-            {expandedSections.antiQuests ? (
-              <ChevronDown className="w-4 h-4 text-[#b9bbbe]" />
-            ) : (
-              <ChevronRight className="w-4 h-4 text-[#b9bbbe]" />
-            )}
-            <AlertTriangle className="w-4 h-4 text-[#ed4245]" />
-            <span className="text-xs uppercase tracking-wide text-[#b9bbbe]">Anti Quests</span>
-            <span className="text-xs text-[#72767d] ml-auto">{filteredAntiQuests.length}</span>
-          </button>
-
-          {expandedSections.antiQuests && (
-            <div className="px-2 pb-2 space-y-1">
-              {/* Create New AntiQuest Button */}
-              {onCreateAntiQuestSelect && (
-                <button
-                  onClick={onCreateAntiQuestSelect}
-                  className={`
-                    w-full px-2 py-2.5 rounded flex items-center gap-2 transition-all mb-2
-                    ${createAntiQuestMode ? 'bg-[#ed4245] bg-opacity-30 border-2 border-[#ed4245]' : 'bg-[#202225] hover:bg-[#2a2d31] border border-[#202225]'}
-                  `}
-                >
-                  <div className="w-5 h-5 rounded-full bg-[#ed4245] flex items-center justify-center">
-                    <Plus className="w-3 h-3 text-white" />
-                  </div>
-                  <span className="text-sm text-[#dcddde]">Create New AntiQuest</span>
-                </button>
-              )}
-
-              {filteredAntiQuests.map(antiQuest => (
-                <AntiQuestItem key={antiQuest.questId} antiQuest={antiQuest} />
-              ))}
-              {filteredAntiQuests.length === 0 && (
-                <div className="px-2 py-3 text-xs text-[#72767d] text-center">
-                  No anti quests yet
                 </div>
               )}
             </div>

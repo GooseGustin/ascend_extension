@@ -8,6 +8,7 @@ import type { Session, PauseEvent } from '../models/Session';
 import type { UserProfile } from '../models/UserProfile';
 import type { Quest } from '../models/Quest';
 import { currentLevelFromExp } from '../utils/level-and-xp-converters';
+import { ActivityFeedService } from './activity-feed.service';
 
 export class SessionService {
   private db = getDB();
@@ -455,6 +456,39 @@ export class SessionService {
       session.sessionType === 'pomodoro' &&
       settings.productivity.pomodoro.autoStartBreak;
     console.log(`[SessionService] shouldStartBreak: ${shouldStartBreak}`);
+
+    // Log activity for XP earned (only for meaningful sessions)
+    if (xpEarned > 0) {
+      const activityService = new ActivityFeedService();
+      await activityService.addActivity({
+        activityId: `xp_earned_${sessionId}`,
+        type: 'xp_earned',
+        userId: session.userId,
+        username: userProfile.username,
+        timestamp: new Date().toISOString(),
+        data: {
+          questId: quest.questId,
+          questTitle: quest.title,
+          xpEarned
+        }
+      });
+
+      // Log level up if it happened
+      if (levelUp && typeof levelUp === 'object' && levelUp.newLevel) {
+        await activityService.addActivity({
+          activityId: `level_up_${quest.questId}_${levelUp.newLevel}`,
+          type: 'level_up',
+          userId: session.userId,
+          username: userProfile.username,
+          timestamp: new Date().toISOString(),
+          data: {
+            level: levelUp.newLevel,
+            questId: quest.questId,
+            questTitle: quest.title
+          }
+        });
+      }
+    }
 
     return {
       session,

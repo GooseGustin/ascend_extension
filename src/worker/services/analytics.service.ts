@@ -311,10 +311,12 @@ export class AnalyticsService {
       startDate,
       endDate
     );
-    const quests = await this.db.quests
+    const allQuests = await this.db.quests
       .where("ownerId")
       .equals(userId)
       .toArray();
+    // Filter out AntiQuests from work distribution
+    const quests = allQuests.filter(q => q.type !== 'AntiQuest');
     const questMap = new Map(quests.map((q) => [q.questId, q.title]));
 
     // Group sessions
@@ -382,10 +384,12 @@ export class AnalyticsService {
       startDate,
       endDate
     );
-    const quests = await this.db.quests
+    const allQuests = await this.db.quests
       .where("ownerId")
       .equals(userId)
       .toArray();
+    // Filter out AntiQuests from time distribution
+    const quests = allQuests.filter(q => q.type !== 'AntiQuest');
     const questMap = new Map(
       quests.map((q) => [q.questId, { title: q.title, color: q.color }])
     );
@@ -433,10 +437,12 @@ export class AnalyticsService {
       now.toISOString().split("T")[0]
     );
 
-    const quests = await this.db.quests
+    const allQuests = await this.db.quests
       .where("ownerId")
       .equals(userId)
       .toArray();
+    // Filter out AntiQuests from velocity data
+    const quests = allQuests.filter(q => q.type !== 'AntiQuest');
     const questMap = new Map(quests.map((q) => [q.questId, q.title]));
 
     // Group by day and quest
@@ -565,10 +571,12 @@ export class AnalyticsService {
       consistency: number;
     }>
   > {
-    const quests = await this.db.quests
+    const allQuests = await this.db.quests
       .where("ownerId")
       .equals(userId)
       .toArray();
+    // Filter out AntiQuests - they don't have sessions/velocity
+    const quests = allQuests.filter(q => q.type !== 'AntiQuest');
     const avgVelocity = 55; // Global average, could be calculated
 
     const questStats = await Promise.all(
@@ -628,10 +636,12 @@ export class AnalyticsService {
       completionRate: number;
     }>
   > {
-    const quests = await this.db.quests
+    const allQuests = await this.db.quests
       .where("ownerId")
       .equals(userId)
       .toArray();
+    // Filter out AntiQuests - they don't have sessions/velocity
+    const quests = allQuests.filter(q => q.type !== 'AntiQuest');
     const avgVelocity = 55;
 
     const questStats = await Promise.all(

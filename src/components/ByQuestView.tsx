@@ -21,9 +21,10 @@ export function ByQuestView({ userId }: ByQuestViewProps) {
 
   useEffect(() => {
     async function loadQuestData() {
-      // Get all user quests
+      // Get all user quests (excluding AntiQuests)
       const questService = new QuestService();
-      const quests = await questService.getUserQuests(userId);
+      const allQuests = await questService.getUserQuests(userId);
+      const quests = allQuests.filter((q: any) => q.type !== 'AntiQuest');
 
       // Get analytics for each quest
       const questStats = await Promise.all(

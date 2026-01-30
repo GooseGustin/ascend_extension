@@ -1017,7 +1017,7 @@ export default function App() {
         />
       )}
       {activeNav === "progress" && (
-        <ProgressMainPanel selectedView={progressView} userId={userId!} />
+        <ProgressMainPanel selectedView={progressView} userId={userId!} antiQuests={antiQuests} />
       )}
     </div>
   );

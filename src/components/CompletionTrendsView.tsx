@@ -18,7 +18,9 @@ export function CompletionTrendsView({userId}: CompletionTrendsViewProps) {
     async function loadTrends() {
           const analyticsService = new AnalyticsService();
           const questService = new QuestService();
-        const quests = await questService.getUserQuests(userId);
+        const allQuests = await questService.getUserQuests(userId);
+        // Filter out AntiQuests - they don't have sessions/velocity
+        const quests = allQuests.filter((q: any) => q.type !== 'AntiQuest');
 
       // Calculate weekly completion trends
       const weeks: any = [];

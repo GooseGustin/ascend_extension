@@ -217,10 +217,13 @@ export function AntiQuestDetails({
             <div className="mb-6">
               <h3 className="text-xs uppercase tracking-wide text-[#b9bbbe] mb-2">Tags</h3>
               <div className="flex flex-wrap gap-2">
-                {antiQuest.tags.map((tag) => (
-                  <Badge key={tag} variant="secondary" className="bg-[#2f3136] text-[#dcddde] hover:bg-[#34373c]">
+                {antiQuest.tags.map((tag, index) => (
+                  <span
+                    key={index}
+                    className="bg-[#5865F2] text-white px-3 py-1 rounded text-sm"
+                  >
                     {tag}
-                  </Badge>
+                  </span>
                 ))}
               </div>
             </div>

@@ -5,13 +5,16 @@ import { BestQuestsView } from './BestQuestsView';
 import { CompletionTrendsView } from './CompletionTrendsView';
 import { XPLogsView } from './XPLogsView';
 import { ByQuestView } from './ByQuestView';
+import { AntiQuestAnalytics } from './AntiQuestAnalytics';
+import type { Quest } from '../worker/models/Quest';
 
 interface ProgressMainPanelProps {
-  userId: string; 
+  userId: string;
   selectedView: string;
+  antiQuests?: Quest[];
 }
 
-export function ProgressMainPanel({ userId, selectedView }: ProgressMainPanelProps) {
+export function ProgressMainPanel({ userId, selectedView, antiQuests = [] }: ProgressMainPanelProps) {
   const renderContent = () => {
     switch (selectedView) {
       case 'overview':
@@ -36,6 +39,15 @@ export function ProgressMainPanel({ userId, selectedView }: ProgressMainPanelPro
         return <BestQuestsView userId={userId} />;
       case 'completion-trends':
         return <CompletionTrendsView userId={userId} />;
+      // AntiQuest Analytics views
+      case 'aq-overview':
+        return <AntiQuestAnalytics antiQuests={antiQuests} view="aq-overview" userId={userId} />;
+      case 'aq-trends':
+        return <AntiQuestAnalytics antiQuests={antiQuests} view="aq-trends" userId={userId} />;
+      case 'aq-impact':
+        return <AntiQuestAnalytics antiQuests={antiQuests} view="aq-impact" userId={userId} />;
+      case 'aq-gaps':
+        return <AntiQuestAnalytics antiQuests={antiQuests} view="aq-gaps" userId={userId} />;
       default:
         return <OverviewDashboard userId={userId} timeView="overview" />;
     }

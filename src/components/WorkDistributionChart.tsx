@@ -48,13 +48,19 @@ export function WorkDistributionChart({
         const chartData = await analyticsService.getWorkDistribution(userId, period);
         setData(chartData);
 
-        // Extract quest names for legend with quest colors
+        // Extract ALL unique quest names across all data points
         if (chartData.length > 0) {
-          const questKeys = Object.keys(chartData[0]).filter(
-            (k) => k !== "name"
-          );
+          const allQuestKeys = new Set<string>();
+          chartData.forEach((dataPoint: any) => {
+            Object.keys(dataPoint).forEach(key => {
+              if (key !== "name") {
+                allQuestKeys.add(key);
+              }
+            });
+          });
+
           setQuests(
-            questKeys.map((key) => ({
+            Array.from(allQuestKeys).map((key) => ({
               key,
               color: questColorMap[key] || '#5865F2',
             }))

@@ -27,8 +27,17 @@ export function QuestVelocityGraph({ userId }: QuestVelocityGraphProps) {
       setData(velocityData);
 
       if (velocityData.length > 0) {
-        const questKeys = Object.keys(velocityData[0]).filter(k => k !== 'day');
-        setQuests(questKeys.map((key) => ({
+        // Collect ALL unique quest keys across all days, not just the first day
+        const allQuestKeys = new Set<string>();
+        velocityData.forEach((dayData: any) => {
+          Object.keys(dayData).forEach(key => {
+            if (key !== 'day') {
+              allQuestKeys.add(key);
+            }
+          });
+        });
+
+        setQuests(Array.from(allQuestKeys).map((key) => ({
           key,
           color: questColorMap[key] || '#5865F2',
         })));
